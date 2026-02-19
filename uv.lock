@@ -73,6 +73,7 @@ dependencies = [
     { name = "botasaurus-driver" },
     { name = "mcp", extra = ["cli"] },
     { name = "pydantic" },
+    { name = "python-dotenv" },
 ]
 
 [package.dev-dependencies]
@@ -85,6 +86,7 @@ requires-dist = [
     { name = "botasaurus-driver", specifier = ">=4.0.0" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.0.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
 
 [package.metadata.requires-dev]
