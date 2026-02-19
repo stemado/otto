@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -100,6 +102,7 @@ class ActionResult(BaseModel):
     url_changed: bool = Field(default=False)
     current_url: str = Field(default="")
     error: str | None = Field(default=None)
+    warning: str | None = Field(default=None, description="Post-action verification warning")
     elapsed_ms: int = Field(default=0)
 
 
@@ -146,6 +149,67 @@ class FindElementsRecord(BaseModel):
     timestamp: str = ""
 
 
+class JavaScriptResult(BaseModel):
+    """Result of executing arbitrary JavaScript in the page context."""
+
+    success: bool
+    result: Any = Field(default=None, description="Return value from the script")
+    result_type: str = Field(default="undefined", description="JS typeof the result: string, number, object, array, boolean, null, undefined")
+    error: str | None = Field(default=None)
+    elapsed_ms: int = Field(default=0)
+
+
+class JavaScriptRecord(BaseModel):
+    """Compact record of a JavaScript execution for session history."""
+
+    script_preview: str = Field(default="", description="First 200 chars of the script")
+    frame_context: str | None = None
+    success: bool = True
+    result_preview: str = Field(default="", description="First 500 chars of the result")
+    timestamp: str = ""
+
+
+class ScreenshotResult(BaseModel):
+    """Result metadata from taking a screenshot (image bytes sent separately)."""
+
+    success: bool
+    format: str = Field(default="png", description="Image format: png or jpeg")
+    byte_size: int = Field(default=0, description="Size of the screenshot in bytes")
+    clipped: bool = Field(default=False, description="Whether a clip region was applied")
+    error: str | None = Field(default=None)
+
+
+class ScreenshotRecord(BaseModel):
+    """Compact record of a screenshot for session history."""
+
+    format: str = "png"
+    clipped: bool = False
+    full_page: bool = False
+    timestamp: str = ""
+
+
+class ElementInspection(BaseModel):
+    """Detailed inspection of a single DOM element."""
+
+    found: bool = Field(description="Whether the element was found")
+    selector: str = Field(default="", description="The selector that was queried")
+    tag: str = Field(default="")
+    bounding_rect: dict[str, float] = Field(default_factory=dict, description="x, y, width, height, top, right, bottom, left")
+    computed_visibility: dict[str, str] = Field(default_factory=dict, description="display, visibility, opacity, overflow, pointer-events")
+    is_visible: bool = Field(default=False)
+    is_obscured: bool = Field(default=False, description="Whether another element covers it at its center point")
+    obscured_by: str | None = Field(default=None, description="Selector of the element covering it")
+    in_shadow_dom: bool = Field(default=False)
+    shadow_host: str | None = Field(default=None)
+    parent_chain: list[str] = Field(default_factory=list, description="Tag#id.class chain from element to body")
+    attributes: dict[str, str] = Field(default_factory=dict)
+    aria: dict[str, str] = Field(default_factory=dict, description="ARIA attributes")
+    input_state: dict[str, Any] = Field(default_factory=dict, description="value, checked, selected, disabled, readOnly for form elements")
+    children_summary: dict[str, int] = Field(default_factory=dict, description="Count of child elements by tag")
+    event_listeners: list[str] = Field(default_factory=list, description="Event types registered on the element")
+    error: str | None = Field(default=None)
+
+
 class SessionHistory(BaseModel):
     """Complete structured history of a browser session."""
 
@@ -154,6 +218,8 @@ class SessionHistory(BaseModel):
     actions: list[ActionRecord] = Field(default_factory=list)
     scouts: list[ScoutSummaryRecord] = Field(default_factory=list)
     find_elements_calls: list[FindElementsRecord] = Field(default_factory=list)
+    javascript_calls: list[JavaScriptRecord] = Field(default_factory=list)
+    screenshots: list[ScreenshotRecord] = Field(default_factory=list)
     network_events: list[NetworkEvent] = Field(default_factory=list)
     navigations: list[dict] = Field(default_factory=list, description="List of {url, timestamp}")
 
@@ -173,3 +239,16 @@ class MonitorResult(BaseModel):
     events: list[NetworkEvent] = Field(default_factory=list)
     total_captured: int = 0
     monitoring_active: bool = False
+
+
+class FillSecretResult(BaseModel):
+    """Result of filling a secret value into a form field."""
+
+    success: bool
+    env_var: str = Field(description="Name of the .env variable used")
+    selector: str = Field(description="CSS selector of the target field")
+    chars_typed: int = Field(default=0, description="Number of characters typed")
+    url_changed: bool = Field(default=False)
+    current_url: str = Field(default="")
+    error: str | None = Field(default=None)
+    elapsed_ms: int = Field(default=0)
