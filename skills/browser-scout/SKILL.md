@@ -25,12 +25,44 @@ The browser session is **stateful and persistent** across tool calls until expli
 2. **Scout** — `scout_page_tool` for a compact page overview (metadata, iframes, shadow DOM, element counts)
 3. **Find** — `find_elements` to search for specific elements by text, type, or selector
 4. **Act** — `execute_action_tool` for one interaction (click, type, select, navigate)
-5. **Scout again** — See what changed
-6. **Repeat 3-5** through the entire workflow
-7. **Monitor** — Before downloads/API calls: `monitor_network` start, execute action, then query
-8. **History** — `get_session_history` for the complete structured record
-9. **Compose** — Write the Playwright script yourself from the intelligence gathered
-10. **Close** — `close_session`
+5. **Fill secrets** — Use `fill_secret` for credential fields (passwords, tokens, API keys). Pass the `.env` variable name and selector — the value stays server-side.
+6. **Verify** — If click returns a `warning`, investigate before proceeding (see below)
+7. **Scout again** — See what changed
+8. **Repeat 3-7** through the entire workflow
+9. **Debug** — Use `execute_javascript` for custom DOM queries or event dispatch
+10. **Screenshot** — Use `take_screenshot` for visual verification at any point
+11. **Monitor** — Before downloads/API calls: `monitor_network` start, execute action, then query
+12. **History** — `get_session_history` for the complete structured record
+13. **Compose** — Write the Playwright script yourself from the intelligence gathered
+14. **Close** — `close_session`
+
+## Autonomous Click Investigation
+
+When `execute_action_tool` returns a `warning` field on a click, the click reported success but nothing changed on the page. **Do not proceed blindly.** Follow this pattern:
+
+1. **Inspect** — Call `inspect_element` on the same selector. Check `is_visible`, `is_obscured`, `in_shadow_dom`, and `computed_visibility`.
+2. **Screenshot** — Call `take_screenshot` to visually confirm the page state.
+3. **Diagnose** based on inspection results:
+   - `is_obscured: true` → An overlay or modal is covering the element. Find and dismiss it, or click the obscuring element first.
+   - `is_visible: false` → The element is hidden (display:none, visibility:hidden, zero size). It may need a hover or prior action to reveal it.
+   - `in_shadow_dom: true` → The selector may need shadow DOM piercing. Try `execute_javascript` with `document.querySelector('host').shadowRoot.querySelector('target').click()`.
+   - `pointer-events: none` → The element is visually present but not clickable. Try JS `.click()` via `execute_javascript`.
+4. **Retry** — Use `execute_javascript` to dispatch a click via JS: `document.querySelector('selector').click()`.
+
+## Debugging Tools
+
+### execute_javascript
+Run arbitrary JS in the page context. Supports `frame_context` for iframe targeting. Use for:
+- Reading shadow DOM: `document.querySelector('host').shadowRoot.innerHTML`
+- Dispatching events: `document.querySelector('sel').dispatchEvent(new Event('click', {bubbles: true}))`
+- Extracting data: `return Array.from(document.querySelectorAll('tr')).map(r => r.textContent)`
+- Debugging state: `return document.querySelector('sel').disabled`
+
+### take_screenshot
+Capture the page as an inline image. Supports clip regions for zooming into specific areas. Use after failed clicks, before/after form submissions, or whenever you need visual confirmation.
+
+### inspect_element
+Deep inspection of a single element: bounding rect, computed visibility, shadow DOM context, whether it's obscured by an overlay, parent chain, ARIA attributes, input state, and children. Use to diagnose why interactions fail.
 
 ## Reading Scout Reports
 
@@ -56,6 +88,10 @@ Use **exact selectors** from `find_elements`. Include **frame context switching*
 ### Credential Parameterization — MANDATORY
 
 Any credentials, tokens, passwords, or API keys observed during the session MUST be extracted into configurable variables at the top of the generated script. Never hardcode sensitive values. The session history contains them in plaintext — parameterize them in output.
+
+### Credentials from `fill_secret`
+
+When `fill_secret` was used during the session, the history already contains parameterized values like `${PAYCOM_PASSWORD}`. Use these variable names directly in the generated Playwright script's configuration section. Do not attempt to resolve or look up the actual values.
 
 ## Limitations
 

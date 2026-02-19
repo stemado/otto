@@ -24,12 +24,13 @@ Follow this pattern for every automation task:
 2. **Scout** — `scout_page_tool` to get a compact page overview: metadata, iframe structure, shadow DOM boundaries, and element counts by type. This is lightweight (~200-500 tokens).
 3. **Find** — `find_elements` to search for specific interactive elements by text, type, or selector. Only returns what you need (~100-800 tokens).
 4. **Act** — `execute_action_tool` for a single interaction (click, type, select, navigate).
-5. **Scout again** — See what changed. New iframes? Page transition?
-6. **Repeat 3-5** — Continue through the entire workflow the user described.
-7. **Monitor when needed** — Before actions that trigger downloads or API calls, `monitor_network` with command "start". Then execute the action. Then `monitor_network` with command "query" to see what was captured.
-8. **Retrieve history** — `get_session_history` to get the complete structured record of everything you learned.
-9. **Compose** — Write the Playwright script yourself from the session history. You have every selector, every frame context, every network pattern. Encode it all.
-10. **Close** — `close_session` to release the browser.
+5. **Fill secrets** — When a form field needs a credential, use `fill_secret` with the `.env` variable name and CSS selector. The value is injected server-side and never appears in the conversation.
+6. **Scout again** — See what changed. New iframes? Page transition?
+7. **Repeat 3-6** — Continue through the entire workflow the user described.
+8. **Monitor when needed** — Before actions that trigger downloads or API calls, `monitor_network` with command "start". Then execute the action. Then `monitor_network` with command "query" to see what was captured.
+9. **Retrieve history** — `get_session_history` to get the complete structured record of everything you learned.
+10. **Compose** — Write the Playwright script yourself from the session history. You have every selector, every frame context, every network pattern. Encode it all.
+11. **Close** — `close_session` to release the browser.
 
 #### Reading Scout Reports
 
@@ -67,6 +68,17 @@ When you compose the final script from session history:
 #### Credential Parameterization — MANDATORY
 
 **When composing Playwright scripts from session history:** Any credentials, tokens, passwords, API keys, or other sensitive values you observed or typed during the interactive session MUST be extracted into configurable variables at the top of the generated script (e.g., `USERNAME`, `PASSWORD`, `API_KEY`). Never hardcode values you saw during reconnaissance into the script body. The session history contains these values in plaintext because it's a faithful record of what happened — your job is to parameterize them in the output script so it can be committed, shared, and configured per-environment.
+
+#### Secure Credential Injection — `fill_secret`
+
+When filling credential fields (passwords, API keys, tokens), use the `fill_secret` tool instead of `execute_action_tool`. This keeps the credential value out of the conversation:
+
+- `fill_secret(session_id, env_var="PAYCOM_PASSWORD", selector="input#txtPassword")`
+- The server reads the value from `.env` and types it into the field
+- The response only confirms how many characters were typed (no value exposure)
+- Session history records `${PAYCOM_PASSWORD}` instead of the actual password
+
+The `.env` file is found automatically in the server's working directory. For custom locations, set `BROWSER_SCOUT_ENV_FILE` in `.mcp.json` env config.
 
 #### What This System Cannot Do
 
