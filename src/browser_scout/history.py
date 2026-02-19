@@ -7,9 +7,11 @@ from datetime import datetime, timezone
 from .models import (
     ActionRecord,
     FindElementsRecord,
+    JavaScriptRecord,
     NetworkEvent,
     ScoutReport,
     ScoutSummaryRecord,
+    ScreenshotRecord,
     SessionHistory,
 )
 from .scout import build_element_summary
@@ -24,6 +26,8 @@ class SessionHistoryTracker:
         self.actions: list[ActionRecord] = []
         self.scouts: list[ScoutSummaryRecord] = []
         self.find_elements_calls: list[FindElementsRecord] = []
+        self.javascript_calls: list[JavaScriptRecord] = []
+        self.screenshots: list[ScreenshotRecord] = []
         self.network_events: list[NetworkEvent] = []
         self.navigations: list[dict] = []
 
@@ -61,6 +65,12 @@ class SessionHistoryTracker:
     def record_network_event(self, event: NetworkEvent) -> None:
         self.network_events.append(event)
 
+    def record_javascript(self, record: JavaScriptRecord) -> None:
+        self.javascript_calls.append(record)
+
+    def record_screenshot(self, record: ScreenshotRecord) -> None:
+        self.screenshots.append(record)
+
     def get_full_history(self) -> SessionHistory:
         return SessionHistory(
             session_id=self.session_id,
@@ -68,6 +78,8 @@ class SessionHistoryTracker:
             actions=self.actions,
             scouts=self.scouts,
             find_elements_calls=self.find_elements_calls,
+            javascript_calls=self.javascript_calls,
+            screenshots=self.screenshots,
             network_events=self.network_events,
             navigations=self.navigations,
         )

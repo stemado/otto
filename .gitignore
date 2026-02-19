@@ -27,5 +27,8 @@ Thumbs.db
 # Downloads captured during browser sessions
 downloads/
 
+# Environment variables
+.env
+
 # Claude Code local settings
 .claude/

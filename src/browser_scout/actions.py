@@ -2,15 +2,38 @@
 
 from __future__ import annotations
 
+import base64
 import json
+import os
+import re
 import time
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from .models import ActionRecord, ActionResult
+from .models import (
+    ActionRecord,
+    ActionResult,
+    ElementInspection,
+    JavaScriptRecord,
+    JavaScriptResult,
+    ScreenshotRecord,
+    ScreenshotResult,
+)
 
 if TYPE_CHECKING:
     from botasaurus_driver import Driver
+
+# Load inspect element JS once at module level
+_JS_DIR = os.path.join(os.path.dirname(__file__), "js")
+_INSPECT_JS: str | None = None
+
+
+def _get_inspect_js() -> str:
+    global _INSPECT_JS
+    if _INSPECT_JS is None:
+        with open(os.path.join(_JS_DIR, "inspect_element.js"), encoding="utf-8") as f:
+            _INSPECT_JS = f.read()
+    return _INSPECT_JS
 
 
 def execute_action(
@@ -46,6 +69,7 @@ def execute_action(
 
     error = None
     action_desc = ""
+    pre_click_fingerprint = None
 
     try:
         # Resolve frame context — get the target to operate on
@@ -54,6 +78,8 @@ def execute_action(
         match action:
             case "click":
                 _require(selector, "selector required for click")
+                # Capture DOM fingerprint before click for verification
+                pre_click_fingerprint = _capture_dom_fingerprint(driver)
                 target.click(selector)
                 action_desc = f"Clicked '{selector}'"
 
@@ -162,12 +188,31 @@ def execute_action(
 
     elapsed = int((time.perf_counter() - start) * 1000)
 
+    # Post-click verification: detect clicks that had no visible effect
+    warning = None
+    if (
+        error is None
+        and action == "click"
+        and pre_click_fingerprint is not None
+        and url_before == url_after
+    ):
+        post_fingerprint = _capture_dom_fingerprint(driver)
+        if post_fingerprint and post_fingerprint == pre_click_fingerprint:
+            warning = (
+                "Click reported success but no DOM changes detected (URL, child count, "
+                "title, and aria-hidden count are all unchanged). The click may not have "
+                "had an effect. Consider using inspect_element to check if the element is "
+                "visible, obscured, or in a shadow DOM. Increasing wait_after may help if "
+                "the page uses async rendering."
+            )
+
     result = ActionResult(
         success=error is None,
         action_performed=action_desc,
         url_changed=url_before != url_after,
         current_url=url_after,
         error=error,
+        warning=warning,
         elapsed_ms=elapsed,
     )
 
@@ -202,6 +247,271 @@ def _resolve_target(driver: Driver, frame_context: str | None):
 def _require(val, message: str) -> None:
     if not val:
         raise ValueError(message)
+
+
+def _capture_dom_fingerprint(driver: Driver) -> dict | None:
+    """Capture a lightweight DOM fingerprint for change detection."""
+    try:
+        return driver.run_js(
+            "return {"
+            "  childCount: document.body ? document.body.children.length : 0,"
+            "  title: document.title,"
+            "  ariaHiddenCount: document.querySelectorAll('[aria-hidden]').length"
+            "}"
+        )
+    except Exception:
+        return None
+
+
+def run_javascript(
+    driver: Driver,
+    script: str,
+    frame_context: str | None = None,
+) -> tuple[JavaScriptResult, JavaScriptRecord]:
+    """Execute arbitrary JavaScript in the page context.
+
+    Args:
+        driver: Active botasaurus-driver instance.
+        script: JavaScript code to execute. The last expression is returned.
+        frame_context: Iframe selector path, or None/'main' for top-level page.
+
+    Returns:
+        Tuple of (JavaScriptResult for tool response, JavaScriptRecord for history).
+    """
+    start = time.perf_counter()
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    try:
+        target = _resolve_target(driver, frame_context)
+        raw_result = target.run_js(script)
+
+        # Classify the result type and normalize
+        if raw_result is None:
+            result_type = "undefined"
+            result_value = None
+        elif isinstance(raw_result, bool):
+            result_type = "boolean"
+            result_value = raw_result
+        elif isinstance(raw_result, (int, float)):
+            result_type = "number"
+            result_value = raw_result
+        elif isinstance(raw_result, str):
+            result_type = "string"
+            result_value = raw_result
+        elif isinstance(raw_result, list):
+            result_type = "array"
+            result_value = raw_result
+        elif isinstance(raw_result, dict):
+            result_type = "object"
+            result_value = raw_result
+        else:
+            # Non-serializable — coerce to string
+            result_type = "string"
+            result_value = str(raw_result)
+
+        elapsed = int((time.perf_counter() - start) * 1000)
+
+        js_result = JavaScriptResult(
+            success=True,
+            result=result_value,
+            result_type=result_type,
+            elapsed_ms=elapsed,
+        )
+
+        # Build compact preview for history
+        result_str = json.dumps(result_value, default=str) if result_value is not None else "undefined"
+        record = JavaScriptRecord(
+            script_preview=script[:200],
+            frame_context=frame_context,
+            success=True,
+            result_preview=result_str[:500],
+            timestamp=timestamp,
+        )
+
+        return js_result, record
+
+    except Exception as e:
+        elapsed = int((time.perf_counter() - start) * 1000)
+
+        js_result = JavaScriptResult(
+            success=False,
+            error=str(e),
+            elapsed_ms=elapsed,
+        )
+
+        record = JavaScriptRecord(
+            script_preview=script[:200],
+            frame_context=frame_context,
+            success=False,
+            result_preview=f"ERROR: {e}"[:500],
+            timestamp=timestamp,
+        )
+
+        return js_result, record
+
+
+def take_screenshot(
+    driver: Driver,
+    image_format: str = "png",
+    quality: int | None = None,
+    clip_x: float | None = None,
+    clip_y: float | None = None,
+    clip_width: float | None = None,
+    clip_height: float | None = None,
+    full_page: bool = False,
+) -> tuple[ScreenshotResult, ScreenshotRecord, bytes | None]:
+    """Capture a screenshot of the current page via CDP.
+
+    Args:
+        driver: Active botasaurus-driver instance.
+        image_format: Image format: 'png' or 'jpeg'.
+        quality: JPEG quality (1-100). Only used when image_format='jpeg'.
+        clip_x, clip_y, clip_width, clip_height: Optional clip region.
+        full_page: If True, capture the full scrollable page. Note: pages with
+                   lazy-loaded content may still show incomplete results.
+
+    Returns:
+        Tuple of (ScreenshotResult metadata, ScreenshotRecord for history, raw image bytes or None on error).
+    """
+    timestamp = datetime.now(timezone.utc).isoformat()
+    clipped = all(v is not None for v in (clip_x, clip_y, clip_width, clip_height))
+
+    if image_format not in ("png", "jpeg"):
+        return (
+            ScreenshotResult(success=False, format=image_format, error=f"Invalid format '{image_format}'. Must be 'png' or 'jpeg'."),
+            ScreenshotRecord(format=image_format, timestamp=timestamp),
+            None,
+        )
+
+    try:
+        from botasaurus_driver import cdp
+
+        # Build CDP screenshot parameters
+        kwargs: dict[str, Any] = {"format_": image_format}
+
+        if image_format == "jpeg" and quality is not None:
+            kwargs["quality"] = quality
+
+        if clipped:
+            kwargs["clip"] = cdp.page.Viewport(
+                x=clip_x,
+                y=clip_y,
+                width=clip_width,
+                height=clip_height,
+                scale=1,
+            )
+
+        if full_page:
+            kwargs["capture_beyond_viewport"] = True
+
+        # CDP returns base64-encoded image data
+        b64_data = driver.run_cdp_command(cdp.page.capture_screenshot(**kwargs))
+        raw_bytes = base64.b64decode(b64_data)
+
+        result = ScreenshotResult(
+            success=True,
+            format=image_format,
+            byte_size=len(raw_bytes),
+            clipped=clipped,
+        )
+
+        record = ScreenshotRecord(
+            format=image_format,
+            clipped=clipped,
+            full_page=full_page,
+            timestamp=timestamp,
+        )
+
+        return result, record, raw_bytes
+
+    except Exception as e:
+        result = ScreenshotResult(
+            success=False,
+            format=image_format,
+            error=str(e),
+        )
+
+        record = ScreenshotRecord(
+            format=image_format,
+            clipped=clipped,
+            full_page=full_page,
+            timestamp=timestamp,
+        )
+
+        return result, record, None
+
+
+def inspect_element(
+    driver: Driver,
+    selector: str,
+    frame_context: str | None = None,
+    include_listeners: bool = False,
+    include_children: bool = True,
+) -> ElementInspection:
+    """Inspect a single DOM element in detail.
+
+    Args:
+        driver: Active botasaurus-driver instance.
+        selector: CSS selector of the element to inspect.
+        frame_context: Iframe selector path, or None/'main' for top-level page.
+        include_listeners: Whether to attempt detecting event listeners. Default: false.
+        include_children: Whether to include children summary. Default: true.
+
+    Returns:
+        ElementInspection with detailed element analysis.
+    """
+    try:
+        target = _resolve_target(driver, frame_context)
+
+        js_template = _get_inspect_js()
+        # Single-pass replacement to prevent cascading substitution
+        # (avoids corruption if selector contains placeholder text)
+        replacements = {
+            "__SELECTOR__": json.dumps(selector),
+            "__INCLUDE_LISTENERS__": json.dumps(include_listeners),
+            "__INCLUDE_CHILDREN__": json.dumps(include_children),
+        }
+        pattern = re.compile("|".join(re.escape(k) for k in replacements))
+        js_code = pattern.sub(lambda m: replacements[m.group(0)], js_template)
+
+        raw = target.run_js(js_code)
+
+        if isinstance(raw, str):
+            data = json.loads(raw)
+        elif isinstance(raw, dict):
+            data = raw
+        else:
+            return ElementInspection(
+                found=False,
+                selector=selector,
+                error=f"Unexpected result type from inspect JS: {type(raw)}",
+            )
+
+        return ElementInspection(
+            found=data.get("found", False),
+            selector=selector,
+            tag=data.get("tag", ""),
+            bounding_rect=data.get("bounding_rect", {}),
+            computed_visibility=data.get("computed_visibility", {}),
+            is_visible=data.get("is_visible", False),
+            is_obscured=data.get("is_obscured", False),
+            obscured_by=data.get("obscured_by"),
+            in_shadow_dom=data.get("in_shadow_dom", False),
+            shadow_host=data.get("shadow_host"),
+            parent_chain=data.get("parent_chain", []),
+            attributes=data.get("attributes", {}),
+            aria=data.get("aria", {}),
+            input_state=data.get("input_state", {}),
+            children_summary=data.get("children_summary", {}),
+            event_listeners=data.get("event_listeners", []),
+        )
+
+    except Exception as e:
+        return ElementInspection(
+            found=False,
+            selector=selector,
+            error=str(e),
+        )
 
 
 def _get_key_map() -> dict:
