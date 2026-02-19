@@ -328,3 +328,46 @@ def test_full_adp_workflow_from_design_doc():
     assert restored.variables["USERNAME"].type == "credential"
     assert restored.steps[7].frame_context == "iframe#adprIframe"
     assert restored.steps[8].action == "wait_for_download"
+
+
+# --- Pre-parameterized value tests ---
+
+
+def test_converter_preserves_pre_parameterized_value():
+    """fill_secret records ${VAR} in history — converter should pass it through."""
+    history = _make_history([
+        ActionRecord(action="type", selector="input#txtPassword", value="${PAYCOM_PASSWORD}", success=True, timestamp="T1"),
+    ])
+    workflow = WorkflowConverter.from_history(history, name="test")
+    assert workflow.steps[0].value == "${PAYCOM_PASSWORD}"
+    assert "PAYCOM_PASSWORD" in workflow.variables
+    assert workflow.variables["PAYCOM_PASSWORD"].type == "credential"
+
+
+def test_converter_preserves_multiple_pre_parameterized():
+    """Multiple pre-parameterized vars from fill_secret."""
+    history = _make_history([
+        ActionRecord(action="type", selector="#client_code", value="${PAYCOM_CLIENT_CODE}", success=True, timestamp="T1"),
+        ActionRecord(action="type", selector="#username", value="${PAYCOM_USERNAME}", success=True, timestamp="T2"),
+        ActionRecord(action="type", selector="#password", value="${PAYCOM_PASSWORD}", success=True, timestamp="T3"),
+    ])
+    workflow = WorkflowConverter.from_history(history, name="test")
+    assert workflow.steps[0].value == "${PAYCOM_CLIENT_CODE}"
+    assert workflow.steps[1].value == "${PAYCOM_USERNAME}"
+    assert workflow.steps[2].value == "${PAYCOM_PASSWORD}"
+    assert len(workflow.variables) == 3
+    for var in workflow.variables.values():
+        assert var.type == "credential"
+
+
+def test_converter_mixed_pre_parameterized_and_auto_detected():
+    """Pre-parameterized fill_secret values coexist with auto-detected ones."""
+    history = _make_history([
+        ActionRecord(action="type", selector="#username", value="${PAYCOM_USERNAME}", success=True, timestamp="T1"),
+        ActionRecord(action="type", selector="#other_password_field", value="raw_secret", success=True, timestamp="T2"),
+    ])
+    workflow = WorkflowConverter.from_history(history, name="test")
+    assert workflow.steps[0].value == "${PAYCOM_USERNAME}"
+    assert "PAYCOM_USERNAME" in workflow.variables
+    assert workflow.steps[1].value == "${PASSWORD}"
+    assert "PASSWORD" in workflow.variables

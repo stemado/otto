@@ -113,22 +113,25 @@ class WorkflowConverter:
         """
         successful = [a for a in history.actions if a.success]
 
-        # First pass: identify credential fields
+        def _is_pre_parameterized(action: ActionRecord) -> bool:
+            return bool(action.value and action.value.startswith("${"))
+
+        # First pass: identify credential fields (skip pre-parameterized values)
         password_indices: set[int] = set()
         username_indices: set[int] = set()
 
         for i, action in enumerate(successful):
-            if action.action == "type" and action.selector:
+            if action.action == "type" and action.selector and not _is_pre_parameterized(action):
                 if _PASSWORD_PATTERNS.search(action.selector):
                     password_indices.add(i)
                     # Look backward for the nearest type action on a username-like field
                     for j in range(i - 1, -1, -1):
                         prev = successful[j]
-                        if prev.action == "type" and prev.selector and _USERNAME_PATTERNS.search(prev.selector):
+                        if prev.action == "type" and prev.selector and not _is_pre_parameterized(prev) and _USERNAME_PATTERNS.search(prev.selector):
                             username_indices.add(j)
                             break
 
-        # Build variables
+        # Build variables from auto-detected credential fields
         variables: dict[str, WorkflowVariable] = {}
         if password_indices:
             variables["PASSWORD"] = WorkflowVariable(
@@ -139,11 +142,23 @@ class WorkflowConverter:
                 type="credential", default="your_username", description="Login username",
             )
 
+        # Collect pre-parameterized ${VAR} values and create credential entries
+        _VAR_RE = re.compile(r"^\$\{(\w+)\}$")
+        for action in successful:
+            if _is_pre_parameterized(action):
+                m = _VAR_RE.match(action.value)  # type: ignore[arg-type]
+                if m:
+                    var_name = m.group(1)
+                    if var_name not in variables:
+                        variables[var_name] = WorkflowVariable(type="credential")
+
         # Second pass: build steps
         steps: list[WorkflowStep] = []
         for i, action in enumerate(successful):
             value = action.value
-            if i in password_indices:
+            if _is_pre_parameterized(action):
+                pass  # preserve pre-parameterized value as-is
+            elif i in password_indices:
                 value = "${PASSWORD}"
             elif i in username_indices:
                 value = "${USERNAME}"
