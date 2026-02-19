@@ -1,0 +1,14 @@
+{
+  "name": "browser-scout-marketplace",
+  "owner": {
+    "name": "sdoherty"
+  },
+  "plugins": [
+    {
+      "name": "browser-scout",
+      "source": "./",
+      "description": "Stealth browser reconnaissance for automating websites with anti-detection",
+      "keywords": ["browser", "automation", "reconnaissance", "playwright", "stealth"]
+    }
+  ]
+}
