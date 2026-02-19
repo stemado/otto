@@ -1,11 +1,11 @@
 ---
-description: Export the current browser session as a replayable Python + botasaurus workflow script
+description: Export the current browser session as a replayable workflow (Python script + portable JSON)
 argument-hint: "[workflow-name]"
 allowed-tools:
   - "mcp__plugin_browser-scout_browser-scout__*"
 ---
 
-Generate a self-contained Python script that replays the current browser session's workflow using botasaurus-driver. Follow these steps precisely:
+Generate both a self-contained Python script and a portable workflow JSON file from the current browser session. Follow these steps precisely:
 
 ## Step 1: Get the session history
 
@@ -94,18 +94,36 @@ Rules for the script:
 - Only include the `USERNAME`/`PASSWORD` variables if credentials were actually detected
 - The script must be **self-contained** — runnable with just `python workflow.py` after installing botasaurus-driver
 
+## Step 5b: Generate workflow JSON
+
+In addition to the Python script, generate a portable workflow JSON file using the `WorkflowConverter` from `src/browser_scout/workflow.py`:
+
+1. Build a `Workflow` model by calling `WorkflowConverter.from_history(history, name=workflow_name, description=description)`
+   - `history` is the `SessionHistory` from Step 1
+   - `workflow_name` is the slugified name from Step 6
+   - `description` is a short summary derived from the key actions (e.g., "Log into ADP WFN and download report")
+2. The converter automatically handles credential parameterization (same logic as Step 4) and step name generation
+3. Serialize with `workflow.model_dump_json(exclude_none=True, indent=2)`
+
+The JSON file is the portable, machine-parseable workflow definition. It can be consumed by any executor (Python, C#, etc.) without requiring Claude in the loop. See `docs/plans/2026-02-19-workflow-json-schema-design.md` for the full schema specification.
+
 ## Step 6: Determine the workflow name
 
 - If the user provided a name as an argument, use it (slugified: lowercase, hyphens for spaces)
 - If no name was provided, derive one from the workflow: e.g., "login-to-reports" based on the navigations and key actions
 - Use the name for both the filename and the docstring
 
-## Step 7: Write the file
+## Step 7: Write the files
 
-Write the script to `workflows/<workflow-name>.py` in the current project directory. Create the `workflows/` directory if it doesn't exist.
+Write both files to the `workflows/` directory in the current project. Create the directory if it doesn't exist:
 
-Present the script to the user and tell them:
-- The file path where it was saved
-- How to run it: `python workflows/<name>.py`
+- **Python script:** `workflows/<workflow-name>.py`
+- **Workflow JSON:** `workflows/<workflow-name>.json`
+
+Present both files to the user and tell them:
+
+- The file paths where they were saved
+- How to run the Python script: `python workflows/<name>.py`
+- That the JSON file is the portable workflow definition for use with any executor
 - What they need to update (credentials, BASE_URL if different environment)
 - That botasaurus-driver must be installed: `pip install botasaurus-driver`
