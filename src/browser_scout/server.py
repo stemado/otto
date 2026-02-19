@@ -10,18 +10,20 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp.utilities.types import Image
 from mcp.server.session import ServerSession
 
-from .actions import execute_action
+from .actions import execute_action, inspect_element, run_javascript, take_screenshot
 from .models import (
-    ActionResult,
-    FindElementsResult,
+    ActionRecord,
+    FillSecretResult,
     MonitorResult,
     ScoutReport,
     SessionCloseResult,
     SessionHistory,
     SessionInfo,
 )
+from .secrets import EnvLoadError, load_env_vars
 from .scout import build_element_summary, filter_elements, scout_page
 from .session import BrowserSession
 
@@ -34,6 +36,7 @@ class AppContext:
 
     sessions: dict[str, BrowserSession] = field(default_factory=dict)
     max_sessions: int = 1
+    env_vars: dict[str, str] | None = field(default=None)
 
 
 @asynccontextmanager
@@ -66,6 +69,16 @@ def _get_session(app_ctx: AppContext, session_id: str) -> BrowserSession:
     if not session.is_active:
         raise ValueError(f"Session '{session_id}' is no longer active.")
     return session
+
+
+def _load_env(app_ctx: AppContext) -> dict[str, str]:
+    """Lazy-load .env variables on first use."""
+    if app_ctx.env_vars is None:
+        try:
+            app_ctx.env_vars = load_env_vars()
+        except EnvLoadError as e:
+            raise ValueError(str(e)) from e
+    return app_ctx.env_vars
 
 
 # --- Tool: launch_session ---
@@ -310,6 +323,275 @@ async def execute_action_tool(
         await ctx.warning(f"Action failed: {result.error}")
 
     return result.model_dump(exclude_none=True)
+
+
+# --- Tool: fill_secret ---
+
+
+@mcp.tool()
+async def fill_secret(
+    session_id: str,
+    env_var: str,
+    selector: str,
+    frame_context: str | None = None,
+    clear_first: bool = True,
+    wait_after: int = 500,
+    ctx: Context[ServerSession, AppContext] = None,
+) -> dict:
+    """Type a secret value from .env into a form field without exposing it in the conversation.
+
+    The server reads the value from the .env file and types it directly into the
+    target element. The actual value never appears in tool parameters or responses.
+
+    Args:
+        session_id: Active session ID.
+        env_var: Name of the environment variable in .env (e.g., 'PAYCOM_PASSWORD').
+        selector: CSS selector of the target input field.
+        frame_context: Iframe selector path for the target element. Use 'main' or omit for top-level.
+        clear_first: Clear the field before typing. Default: true.
+        wait_after: Milliseconds to wait after typing. Default: 500.
+    """
+    import time
+    from datetime import datetime, timezone
+
+    from .actions import _resolve_target
+
+    app_ctx = _get_ctx(ctx)
+    session = _get_session(app_ctx, session_id)
+
+    start = time.perf_counter()
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    # Load the secret value server-side
+    try:
+        env = _load_env(app_ctx)
+    except ValueError as e:
+        return FillSecretResult(
+            success=False, env_var=env_var, selector=selector,
+            error=str(e),
+        ).model_dump(exclude_none=True)
+
+    if env_var not in env:
+        return FillSecretResult(
+            success=False, env_var=env_var, selector=selector,
+            error=f"Environment variable '{env_var}' not found. Check your .env file.",
+        ).model_dump(exclude_none=True)
+
+    secret_value = env[env_var]
+
+    # Get URL before action (driver access is sync — must use thread)
+    try:
+        url_before = await asyncio.to_thread(lambda: session.driver.current_url)
+    except Exception:
+        url_before = ""
+
+    # Type the value into the field (synchronous driver operations)
+    error = None
+    try:
+        target = await asyncio.to_thread(_resolve_target, session.driver, frame_context)
+        if clear_first:
+            await asyncio.to_thread(target.clear, selector)
+        await asyncio.to_thread(target.type, selector, secret_value)
+    except Exception as e:
+        error = str(e)
+
+    # Wait after action (non-blocking)
+    if wait_after > 0:
+        await asyncio.sleep(wait_after / 1000)
+
+    # Get URL after action (driver access is sync — must use thread)
+    try:
+        url_after = await asyncio.to_thread(lambda: session.driver.current_url)
+    except Exception:
+        url_after = url_before
+
+    elapsed = int((time.perf_counter() - start) * 1000)
+
+    # Record in history with reference, NOT the actual value
+    record = ActionRecord(
+        action="type",
+        selector=selector,
+        value=f"${{{env_var}}}",
+        frame_context=frame_context,
+        success=error is None,
+        url_before=url_before,
+        url_after=url_after,
+        timestamp=timestamp,
+        error=error,
+    )
+    session.history.record_action(record)
+    if url_before != url_after:
+        session.history.record_navigation(url_after)
+    session.invalidate_element_cache()
+
+    result = FillSecretResult(
+        success=error is None,
+        env_var=env_var,
+        selector=selector,
+        chars_typed=len(secret_value) if error is None else 0,
+        url_changed=url_before != url_after,
+        current_url=url_after,
+        error=error,
+        elapsed_ms=elapsed,
+    )
+
+    if result.success:
+        await ctx.info(f"Secret '{env_var}' typed into '{selector}' ({result.chars_typed} chars)")
+    else:
+        await ctx.warning(f"fill_secret failed: {error}")
+
+    return result.model_dump(exclude_none=True)
+
+
+# --- Tool: execute_javascript ---
+
+
+@mcp.tool()
+async def execute_javascript(
+    session_id: str,
+    script: str,
+    frame_context: str | None = None,
+    ctx: Context[ServerSession, AppContext] = None,
+) -> dict:
+    """Execute arbitrary JavaScript in the page context and return the result.
+
+    Use this to debug click failures, read shadow DOM content, dispatch custom
+    events, extract data, or perform any DOM operation not covered by other tools.
+
+    Args:
+        session_id: Active session ID.
+        script: JavaScript code to execute. The last expression is returned as the result.
+        frame_context: Iframe selector path for execution context. Use 'main' or omit for top-level.
+    """
+    app_ctx = _get_ctx(ctx)
+    session = _get_session(app_ctx, session_id)
+
+    await ctx.info("Executing JavaScript...")
+    result, record = await asyncio.to_thread(
+        run_javascript, session.driver, script, frame_context
+    )
+
+    session.history.record_javascript(record)
+
+    # JS can modify the DOM arbitrarily, so invalidate cached elements
+    session.invalidate_element_cache()
+
+    if result.success:
+        await ctx.info(f"JS executed: {result.result_type} result")
+    else:
+        await ctx.warning(f"JS execution failed: {result.error}")
+
+    return result.model_dump(exclude_none=True)
+
+
+# --- Tool: take_screenshot ---
+
+
+@mcp.tool()
+async def take_screenshot_tool(
+    session_id: str,
+    format: Literal["png", "jpeg"] = "png",
+    quality: int | None = None,
+    clip_x: float | None = None,
+    clip_y: float | None = None,
+    clip_width: float | None = None,
+    clip_height: float | None = None,
+    full_page: bool = False,
+    ctx: Context[ServerSession, AppContext] = None,
+) -> list | dict:
+    """Capture a screenshot of the current page. Returns the image inline so Claude can see it.
+
+    Use this for visual verification after clicks, to see page state, or to debug
+    layout issues. Supports optional clip region to zoom into specific areas.
+
+    Args:
+        session_id: Active session ID.
+        format: Image format: 'png' or 'jpeg'. Default: 'png'.
+        quality: JPEG quality (1-100). Only used when format='jpeg'.
+        clip_x: Left coordinate of clip region (viewport pixels).
+        clip_y: Top coordinate of clip region (viewport pixels).
+        clip_width: Width of clip region.
+        clip_height: Height of clip region.
+        full_page: Capture the full scrollable page, not just viewport. Default: false.
+                   Note: pages with lazy-loaded content may still show incomplete results.
+    """
+    app_ctx = _get_ctx(ctx)
+    session = _get_session(app_ctx, session_id)
+
+    await ctx.info("Taking screenshot...")
+    result, record, raw_bytes = await asyncio.to_thread(
+        take_screenshot,
+        session.driver,
+        image_format=format,
+        quality=quality,
+        clip_x=clip_x,
+        clip_y=clip_y,
+        clip_width=clip_width,
+        clip_height=clip_height,
+        full_page=full_page,
+    )
+
+    session.history.record_screenshot(record)
+
+    if not result.success or raw_bytes is None:
+        await ctx.warning(f"Screenshot failed: {result.error}")
+        return result.model_dump(exclude_none=True)
+
+    await ctx.info(f"Screenshot captured: {result.byte_size} bytes ({format})")
+
+    # Return metadata dict + Image for inline display
+    return [
+        result.model_dump(exclude_none=True),
+        Image(data=raw_bytes, format=format),
+    ]
+
+
+# --- Tool: inspect_element ---
+
+
+@mcp.tool()
+async def inspect_element_tool(
+    session_id: str,
+    selector: str,
+    frame_context: str | None = None,
+    include_listeners: bool = False,
+    include_children: bool = True,
+    ctx: Context[ServerSession, AppContext] = None,
+) -> dict:
+    """Inspect a single DOM element in detail — visibility, position, shadow DOM, overlays, and more.
+
+    Use this to diagnose why a click didn't work, check if an element is obscured by
+    an overlay, verify shadow DOM context, or examine element state before interacting.
+
+    Args:
+        session_id: Active session ID.
+        selector: CSS selector of the element to inspect.
+        frame_context: Iframe selector path. Use 'main' or omit for top-level.
+        include_listeners: Detect inline event handlers (onclick, etc.). Default: false.
+        include_children: Include child element summary. Default: true.
+    """
+    app_ctx = _get_ctx(ctx)
+    session = _get_session(app_ctx, session_id)
+
+    await ctx.info(f"Inspecting element: {selector}")
+    inspection = await asyncio.to_thread(
+        inspect_element,
+        session.driver,
+        selector,
+        frame_context,
+        include_listeners,
+        include_children,
+    )
+
+    if inspection.found:
+        status = "visible" if inspection.is_visible else "hidden"
+        if inspection.is_obscured:
+            status += f", obscured by {inspection.obscured_by}"
+        await ctx.info(f"Element found: <{inspection.tag}> ({status})")
+    else:
+        await ctx.warning(f"Element not found: {selector}")
+
+    return inspection.model_dump(exclude_none=True)
 
 
 # --- Tool: monitor_network ---
