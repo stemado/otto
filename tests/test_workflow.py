@@ -1,10 +1,13 @@
 """Tests for workflow JSON schema models."""
 
+import json
+
 from browser_scout.models import ActionRecord, SessionHistory
 from browser_scout.workflow import (
     Workflow,
     WorkflowConverter,
     WorkflowSettings,
+    WorkflowSource,
     WorkflowStep,
     WorkflowVariable,
 )
@@ -242,3 +245,86 @@ def test_converter_json_output_excludes_none():
     assert "frame_context" not in json_str
     assert "shadow_pierce" not in json_str
     assert "url_pattern" not in json_str
+
+
+# --- Schema validation tests ---
+
+
+def test_workflow_json_schema_has_required_envelope_fields():
+    """Verify the JSON schema matches the design doc envelope."""
+    workflow = Workflow(name="schema-test", description="Testing schema compliance")
+    data = json.loads(workflow.model_dump_json(exclude_none=True))
+
+    assert "schema_version" in data
+    assert "name" in data
+    assert "description" in data
+    assert "created" in data
+    assert "source" in data
+    assert "variables" in data
+    assert "settings" in data
+    assert "steps" in data
+
+
+def test_workflow_json_schema_all_action_types_valid():
+    """Every action type from the design doc can be instantiated."""
+    action_configs = [
+        {"action": "navigate", "value": "https://example.com"},
+        {"action": "click", "selector": "#btn"},
+        {"action": "type", "selector": "#input", "value": "hello"},
+        {"action": "select", "selector": "#dropdown", "value": "option1"},
+        {"action": "scroll", "value": "500"},
+        {"action": "wait", "value": "2000"},
+        {"action": "wait_for_download", "filename_pattern": "*.csv"},
+        {"action": "wait_for_response", "url_pattern": "/api/data"},
+        {"action": "press_key", "value": "Enter"},
+        {"action": "hover", "selector": "#menu"},
+        {"action": "clear", "selector": "#input"},
+    ]
+    for i, config in enumerate(action_configs):
+        step = WorkflowStep(order=i + 1, name=f"Step {i + 1}", **config)
+        assert step.action == config["action"]
+
+
+def test_full_adp_workflow_from_design_doc():
+    """Instantiate the complete ADP example from the design doc."""
+    workflow = Workflow(
+        name="adp-report-download",
+        description="Log into ADP WFN and download the Unum LTD FMLA report",
+        source=WorkflowSource(tool="browser-scout", session_id="abc123"),
+        variables={
+            "USERNAME": WorkflowVariable(type="credential", default="your_username"),
+            "PASSWORD": WorkflowVariable(type="credential", default="your_password"),
+            "REPORT_NAME": WorkflowVariable(type="string", default="Unum_LTD_FMLA_Report"),
+        },
+        settings=WorkflowSettings(headless=False, default_timeout_ms=30000, step_delay_ms=500, on_error="stop"),
+        steps=[
+            WorkflowStep(order=1, name="Navigate to ADP sign-in", action="navigate",
+                         value="https://online.adp.com/signin/v1/?APPID=WFNPortal"),
+            WorkflowStep(order=2, name="Enter username", action="type",
+                         selector="#login-form_username", value="${USERNAME}", clear_first=True),
+            WorkflowStep(order=3, name="Click Next button", action="click",
+                         selector="[data-testid='verifUseridBtn']"),
+            WorkflowStep(order=4, name="Enter password", action="type",
+                         selector="#login-form_password", value="${PASSWORD}", clear_first=True),
+            WorkflowStep(order=5, name="Click Sign In", action="click", selector="#signBtn"),
+            WorkflowStep(order=6, name="Wait for WFN dashboard", action="wait",
+                         selector="#shellNavComponent", timeout_ms=15000),
+            WorkflowStep(order=7, name="Navigate to Custom Reports", action="navigate",
+                         value="https://workforcenow.adp.com/theme/admin.html#/Reports/ReportsTabCustomReportsCategoryAllReports"),
+            WorkflowStep(order=8, name="Click report link", action="click",
+                         selector="[aria-label='${REPORT_NAME}']",
+                         frame_context="iframe#adprIframe", timeout_ms=15000),
+            WorkflowStep(order=9, name="Wait for report download", action="wait_for_download",
+                         timeout_ms=60000, filename_pattern="*.csv"),
+        ],
+    )
+
+    # Roundtrip through JSON
+    json_str = workflow.model_dump_json(exclude_none=True, indent=2)
+    restored = Workflow.model_validate_json(json_str)
+
+    assert restored.name == "adp-report-download"
+    assert len(restored.steps) == 9
+    assert restored.variables["USERNAME"].type == "credential"
+    assert restored.steps[7].frame_context == "iframe#adprIframe"
+    assert restored.steps[8].action == "wait_for_download"
