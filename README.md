@@ -1,19 +1,18 @@
 # Browser Scout
 
-Stealth browser reconnaissance plugin for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Scout websites interactively, then compose production-grade automation scripts with anti-detection built in.
+Automate any website by describing what you want in plain English. No web development knowledge required.
 
-Built on [Botasaurus](https://github.com/omkarcloud/botasaurus), which handles fingerprint evasion, human-like timing, and stealth browsing automatically — the exact problem Playwright and Puppeteer can't solve.
+Browser Scout is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that gives Claude a real browser it can see and control. You describe the task — "log into Paycom, navigate to Census, export the CSV" — and Claude figures out the website for you: the nested iframes, the shadow DOM, the XHR calls, the authentication flow. Then it writes a production-grade automation script you can run on a schedule without Claude.
 
-## What It Does
+## Why This Exists
 
-Browser Scout gives Claude a live browser it can drive interactively. Instead of guessing at page structure, Claude scouts the DOM incrementally — discovering nested iframes, shadow DOM boundaries, and network behavior — then uses exact selectors from reconnaissance to compose scripts.
+Writing browser automation for enterprise portals is painful. The login form is inside a triple-nested iframe. The export button triggers an XHR that returns a signed URL. The page detects Playwright and blocks you.
 
-**The workflow:**
+Browser Scout solves all three problems:
 
-1. **Scout** — Launch a stealth browser and inspect page structure
-2. **Interact** — Click, type, navigate, fill forms step by step
-3. **Observe** — Re-scout after each action to see what changed
-4. **Export** — Generate a standalone botasaurus-driver Python script from the session
+1. **You don't need to understand the website.** Claude scouts the page structure, discovers what's actually there, and uses exact selectors from reconnaissance — not guesses.
+2. **You don't need to write code.** Describe the workflow conversationally. Claude drives the browser step by step, then exports a standalone script.
+3. **Sites can't detect the automation.** Built on [Botasaurus](https://github.com/omkarcloud/botasaurus), which handles fingerprint evasion, human-like timing, and stealth browsing automatically — the exact problem Playwright and Puppeteer can't solve.
 
 ## Install
 
@@ -32,36 +31,35 @@ Dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are insta
 
 ## Usage
 
-### `/scout <url>`
+Just describe what you want automated:
 
-Launch a stealth browser, scout the page, and get a structural overview:
+> "Scout the Paycom login page, log in with the credentials in .env, navigate to Census > Export, and download the CSV"
 
-```
-/scout https://example.com/login
-```
+Claude launches a stealth browser, scouts the page, drives through the workflow step by step, and exports a standalone script when done. You watch it work and redirect as needed — the same way you'd pair-program with a colleague who happens to have a browser open.
 
-Returns: page title, iframe hierarchy, shadow DOM boundaries, and interactive element counts. The session stays alive for follow-up interactions.
+### Commands
 
-### `/export-workflow [name]`
-
-After completing a workflow interactively, export it as a replayable script:
+**`/scout <url>`** — Launch a stealth browser and get a structural overview of any page: iframe hierarchy, shadow DOM boundaries, interactive element counts. The session stays alive for follow-up interactions.
 
 ```
-/export-workflow paycom-census-export
+/scout https://online.adp.com/signin/v1/
 ```
 
-Produces two files in `workflows/`:
-- A Python script with numbered, commented steps
+**`/export-workflow [name]`** — After completing a workflow interactively, export it as a replayable script. Produces two files in `workflows/`:
+
+- A standalone Python script with numbered, commented steps
 - A portable JSON workflow definition (replayable with `workflow-run`)
 
 Credentials are automatically parameterized — real values never appear in the output.
 
-### `workflow-run`
+```
+/export-workflow adp-report-download
+```
 
-Replay an exported workflow JSON file without Claude in the loop:
+**`workflow-run`** — Replay an exported workflow without Claude in the loop. Run it on a schedule, in CI, or as a cron job.
 
 ```
-workflow-run workflows/paycom-census-export.json \
+workflow-run workflows/adp-report-download.json \
   --var USERNAME=admin --var PASSWORD=s3cret
 ```
 
@@ -73,14 +71,6 @@ workflow-run workflows/my-workflow.json --headless   # run headless
 ```
 
 Each step emits a JSON log line to stdout. Exit code 0 on success, 1 on step failure, 2 on validation error.
-
-### Conversational Automation
-
-You can also just describe what you want:
-
-> "Scout the Paycom login page, log in with the credentials in .env, navigate to Census > Export, and download the CSV"
-
-Claude will drive the browser step by step, scouting at each stage, and can export the workflow when done.
 
 ## MCP Tools
 
@@ -100,14 +90,23 @@ The plugin exposes 11 tools via MCP:
 | `get_session_history` | Retrieve the full structured history of the session |
 | `close_session` | Close the browser and release resources |
 
-## Key Features
+## How It Compares
 
-- **Anti-detection by default** — Botasaurus handles fingerprinting, timing, and stealth automatically
-- **Secure credential injection** — `fill_secret` reads from `.env` server-side; values never appear in conversation
-- **Full iframe + shadow DOM support** — Scout reports map the hierarchy; actions target elements in any context
-- **Network monitoring** — Intercept XHR/API calls and downloads to reverse-engineer export workflows
-- **Token-efficient** — Two-phase discovery: compact summary first (~200 tokens), drill into specifics on demand
-- **Stateful sessions** — Login once, explore freely without re-authenticating
+There are several ways to give Claude browser access. They solve different problems.
+
+| | Browser Scout | [Dev-Browser](https://github.com/SawyerHood/dev-browser) | [Claude in Chrome](https://code.claude.com/docs/en/chrome) | [Playwright MCP](https://browsermcp.io/) |
+| --- | --- | --- | --- | --- |
+| **Primary use case** | Automate sites you've never seen before | Test your own app during development | Debug and inspect pages interactively | Cross-browser test automation |
+| **Anti-detection** | Yes (Botasaurus stealth) | No (Playwright) | No (your real browser) | No (Playwright) |
+| **Discovers page structure** | Yes (scout + find_elements) | No (you provide selectors) | No (you direct it) | No (you provide selectors) |
+| **Exports standalone scripts** | Yes (Python + JSON) | No | No | No |
+| **Runs without Claude** | Yes (`workflow-run` CLI) | No | No | No |
+| **Credential security** | `.env` injection, never in conversation | N/A | Uses your browser's sessions | N/A |
+| **Handles iframes + shadow DOM** | Auto-discovered and navigated | Manual | Manual | Manual |
+
+**When to use Browser Scout:** You need to automate an enterprise portal, HR system, or third-party site where you don't control the HTML, the page uses anti-bot detection, and you want a script that runs unattended.
+
+**When to use something else:** If you're testing your own app (Dev-Browser), debugging a page you're already looking at (Claude in Chrome), or running cross-browser test suites (Playwright MCP).
 
 ## License
 
