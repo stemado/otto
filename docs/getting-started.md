@@ -1,0 +1,138 @@
+# Getting Started with Browser Scout
+
+This guide walks you through installation, your first session, credential handling, and exporting replayable workflows. If you've never used the plugin before, start here.
+
+## What Is It?
+
+Browser Scout gives Claude Code a stealth browser it can drive interactively. You tell Claude to go to a website, and it launches a real Chrome window with anti-detection baked in (via Botasaurus). Claude can then click around, fill forms, inspect page structure, capture network traffic, and ultimately generate a replayable automation script — all through conversation.
+
+Think of it as giving Claude its own browser DevTools session.
+
+## Prerequisites
+
+You need three things installed before the plugin will work:
+
+1. **Python 3.11+** — the MCP server is written in Python
+2. **[uv](https://docs.astral.sh/uv/getting-started/installation/)** — a fast Python package manager. The plugin uses `uv run` to auto-install dependencies on first launch (no manual `pip install` needed)
+3. **Google Chrome** — Botasaurus drives Chrome via the DevTools Protocol
+
+`uv` creates an isolated virtual environment and installs all dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) automatically the first time the server starts. Zero manual dependency management.
+
+## Installation
+
+Two commands in Claude Code:
+
+```
+/plugin marketplace add stemado/browser-scout-marketplace
+```
+
+This registers the marketplace (a pointer to the GitHub repo — not a centralized store). Then install the plugin:
+
+```
+/plugin install browser-scout@browser-scout-marketplace
+```
+
+That's it. Claude Code snapshots the plugin into its cache, registers the MCP server, and makes the skills and commands available.
+
+Under the hood, the plugin gets cached to `~/.claude/plugins/cache/browser-scout-marketplace/browser-scout/0.1.0/`. The MCP server config inside that cache tells Claude Code how to launch the Python server via `uv run`.
+
+## Your First Session
+
+### Quick Start with `/scout`
+
+The fastest way to try it:
+
+```
+/scout https://example.com
+```
+
+This launches a visible Chrome window (headed mode), navigates to the URL, and returns a structural overview: page title, iframe hierarchy, shadow DOM boundaries, and counts of interactive elements. The browser stays open so you can keep interacting.
+
+### Conversational Workflow
+
+After scouting, just talk to Claude naturally:
+
+- **"Click the Login button"** — Claude finds the button and clicks it
+- **"Type admin@example.com in the email field"** — Claude locates the input and types into it
+- **"What changed on the page?"** — Claude re-scouts and tells you what's different
+- **"Monitor network traffic, then click Export"** — Claude captures the XHR/fetch calls triggered by the click
+- **"Take a screenshot"** — Claude captures and shows you the current browser state
+
+Claude builds up a complete understanding of the site step by step, exactly like you would in DevTools.
+
+## Handling Credentials
+
+If a form needs a password or API key, you don't paste it into chat. Instead:
+
+1. Create a `.env` file in your project directory:
+
+```
+MY_PASSWORD=supersecret123
+MY_USERNAME=admin@example.com
+```
+
+2. Tell Claude: **"Fill the password field using MY_PASSWORD from .env"**
+
+Claude uses the `fill_secret` tool — the actual value is read server-side, typed into the field, and never appears in your conversation. The session history records `${MY_PASSWORD}` instead of the real value.
+
+This is a deliberate security design. The `.env` file should be gitignored, and credentials are parameterized in both conversation history and exported scripts. You can safely share scripts and session logs without leaking secrets.
+
+The `.env` search order is: explicit path > `BROWSER_SCOUT_ENV_FILE` env var > `.env` in the current working directory.
+
+## Exporting a Replayable Script
+
+Once you've walked through a complete workflow (login, navigate, click export, etc.), run:
+
+```
+/export-workflow paycom-export
+```
+
+This generates two files in `workflows/`:
+
+1. **`paycom-export.py`** — A standalone Python script using `botasaurus-driver` with numbered, commented steps. Credentials are parameterized as variables at the top.
+2. **`paycom-export.json`** — A portable JSON workflow definition.
+
+## Replaying Workflows Without Claude
+
+The JSON workflow can be replayed from the command line without Claude in the loop:
+
+```
+workflow-run workflows/paycom-export.json \
+  --var USERNAME=admin --var PASSWORD=secret
+```
+
+Useful flags:
+
+- `--dry-run` — validate and print the plan without executing
+- `--headless` — run without a visible browser window
+- `--timeout 60000` — set step timeout in milliseconds
+- `--download-dir ./downloads` — where to save downloaded files
+- `--screenshot-dir ./screenshots` — where to save failure screenshots
+
+Variables are resolved in this order: `--var` CLI args > environment variables > workflow defaults. If a variable can't be resolved, the executor exits with code 2 before launching a browser.
+
+## The 11 MCP Tools
+
+These are the tools Claude uses behind the scenes. You don't call them directly — Claude picks the right one based on what you ask — but knowing what's available helps you understand what's possible.
+
+| Tool | What it does |
+|------|-------------|
+| `launch_session` | Opens a stealth Chrome browser |
+| `scout_page_tool` | Lightweight page overview (~200 tokens) |
+| `find_elements` | Search for specific elements by text/type/selector |
+| `execute_action_tool` | Click, type, select, scroll, navigate, hover |
+| `fill_secret` | Inject credentials from `.env` without exposing them |
+| `execute_javascript` | Run arbitrary JS in page context |
+| `take_screenshot` | Capture the current browser state as an image |
+| `inspect_element` | Deep-inspect a single element (visibility, overlays, shadow DOM) |
+| `monitor_network` | Capture/query network traffic and downloads |
+| `get_session_history` | Get the full structured record of everything you did |
+| `close_session` | Close the browser and clean up |
+
+## Common Gotchas
+
+- **One session at a time** — the server limits to 1 concurrent browser session. Close the current one before starting another.
+- **Sessions don't persist between conversations** — each Claude Code conversation starts fresh. If you need to repeat a workflow, export it first.
+- **CAPTCHAs** — Botasaurus reduces how often they appear, but can't solve them. If you hit one, you'll need to handle it manually in the browser window.
+- **The browser window is real** — it opens a visible Chrome window on your screen (unless you pass `headless: true`). You can watch Claude drive it in real time.
+- **Don't repeat logins** — the session is stateful. Once you're logged in, stay logged in. Repeated rapid login attempts trigger security detection and CAPTCHAs.

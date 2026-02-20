@@ -14,6 +14,8 @@ Browser Scout solves all three problems:
 2. **You don't need to write code.** Describe the workflow conversationally. Claude drives the browser step by step, then exports a standalone script.
 3. **Sites can't detect the automation.** Built on [Botasaurus](https://github.com/omkarcloud/botasaurus), which handles fingerprint evasion, human-like timing, and stealth browsing automatically — the exact problem Playwright and Puppeteer can't solve.
 
+**New here?** See the [Getting Started guide](docs/getting-started.md) for a full walkthrough with examples.
+
 ## Install
 
 ```
