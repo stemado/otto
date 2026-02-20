@@ -54,9 +54,7 @@ class WorkflowStep(BaseModel):
     timeout_ms: int | None = Field(default=None, ge=0)
 
     # Action-specific optional fields
-    shadow_pierce: bool | None = None          # click, type, select
     clear_first: bool | None = None            # type
-    wait_for_load: bool | None = None          # navigate
     filename_pattern: str | None = None        # wait_for_download
     download_dir: str | None = None            # wait_for_download
     url_pattern: str | None = None             # wait_for_response

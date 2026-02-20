@@ -42,7 +42,6 @@ def execute_action(
     selector: str | None = None,
     value: str | None = None,
     frame_context: str | None = None,
-    shadow_pierce: bool = False,
     wait_after: int = 500,
 ) -> tuple[ActionResult, ActionRecord]:
     """Execute a single browser action and return the result + history record.
@@ -53,7 +52,6 @@ def execute_action(
         selector: CSS selector for the target element (required for most actions).
         value: Context-dependent value (text to type, URL to navigate, key to press, etc.).
         frame_context: Iframe selector path, or None/'main' for top-level page.
-        shadow_pierce: Whether selector needs shadow DOM piercing.
         wait_after: Milliseconds to wait after action completes.
 
     Returns:

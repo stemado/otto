@@ -137,7 +137,6 @@ async def launch_session(
 async def scout_page_tool(
     session_id: str,
     focus_frame: str | None = None,
-    include_styles: bool = False,
     detail_level: Literal["summary", "full"] = "summary",
     ctx: Context[ServerSession, AppContext] = None,
 ) -> dict:
@@ -150,7 +149,6 @@ async def scout_page_tool(
     Args:
         session_id: Active session ID from launch_session.
         focus_frame: Optional iframe CSS selector to scout instead of the full page.
-        include_styles: Include computed visibility info for elements. Default: false.
         detail_level: 'summary' (default) returns compact overview with element counts.
                       'full' returns all interactive elements (large response).
     """
@@ -159,7 +157,7 @@ async def scout_page_tool(
 
     await ctx.info("Scouting page...")
     report: ScoutReport = await asyncio.to_thread(
-        scout_page, session.driver, focus_frame, include_styles
+        scout_page, session.driver, focus_frame
     )
 
     # Cache elements for find_elements queries
@@ -220,7 +218,7 @@ async def find_elements(
     if elements is None:
         await ctx.info("No cached elements — scouting page first...")
         report: ScoutReport = await asyncio.to_thread(
-            scout_page, session.driver, None, False
+            scout_page, session.driver, None
         )
         elements = report.interactive_elements
         session.cache_elements(elements)
@@ -279,7 +277,6 @@ async def execute_action_tool(
     selector: str | None = None,
     value: str | None = None,
     frame_context: str | None = None,
-    shadow_pierce: bool = False,
     wait_after: int = 500,
     ctx: Context[ServerSession, AppContext] = None,
 ) -> dict:
@@ -294,7 +291,6 @@ async def execute_action_tool(
         selector: CSS selector of the target element. Required for click, type, select, hover, clear.
         value: Text to type, option to select, URL to navigate to, key to press, or wait duration.
         frame_context: Iframe selector path for the target element. Use 'main' or omit for top-level.
-        shadow_pierce: Whether the selector needs shadow DOM piercing. Default: false.
         wait_after: Milliseconds to wait after action completes. Default: 500.
     """
     app_ctx = _get_ctx(ctx)
@@ -308,7 +304,6 @@ async def execute_action_tool(
         selector,
         value,
         frame_context,
-        shadow_pierce,
         wait_after,
     )
 

@@ -10,6 +10,8 @@ from browser_scout.scout import scout_page, build_element_summary, filter_elemen
 from browser_scout.session import BrowserSession
 from browser_scout.history import SessionHistoryTracker
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture(scope="module")
 def session():

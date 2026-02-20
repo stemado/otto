@@ -90,7 +90,6 @@ class ScoutReport(BaseModel):
     iframe_map: list[IframeInfo] = Field(default_factory=list)
     shadow_dom_boundaries: list[ShadowDomBoundary] = Field(default_factory=list)
     interactive_elements: list[InteractiveElement] = Field(default_factory=list)
-    network_activity: list[NetworkEvent] = Field(default_factory=list)
     page_summary: str = Field(default="", description="Human-readable summary of page structure")
 
 

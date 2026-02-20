@@ -96,8 +96,6 @@ def test_workflow_step_defaults():
     assert step.on_error is None
     assert step.timeout_ms is None
     assert step.clear_first is None
-    assert step.shadow_pierce is None
-    assert step.wait_for_load is None
     assert step.filename_pattern is None
     assert step.url_pattern is None
     assert step.method is None
@@ -241,9 +239,8 @@ def test_converter_json_output_excludes_none():
     ])
     workflow = WorkflowConverter.from_history(history, name="test")
     json_str = workflow.model_dump_json(exclude_none=True, indent=2)
-    # None fields like frame_context, shadow_pierce should not appear
+    # None fields like frame_context should not appear
     assert "frame_context" not in json_str
-    assert "shadow_pierce" not in json_str
     assert "url_pattern" not in json_str
 
 

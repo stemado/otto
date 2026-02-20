@@ -34,14 +34,12 @@ def _get_scout_js() -> str:
 def scout_page(
     driver: Driver,
     focus_frame: str | None = None,
-    include_styles: bool = False,
 ) -> ScoutReport:
     """Inject reconnaissance JS and parse the structured report.
 
     Args:
         driver: Active botasaurus-driver instance.
         focus_frame: Optional CSS selector of a specific iframe to scout instead of the full page.
-        include_styles: Whether to include computed visibility info (adds overhead).
 
     Returns:
         ScoutReport with complete page intelligence.
