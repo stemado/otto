@@ -30,5 +30,8 @@ downloads/
 # Environment variables
 .env
 
+# Exported workflow files (may contain credentials)
+workflows/
+
 # Claude Code local settings
 .claude/
