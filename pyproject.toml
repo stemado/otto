@@ -12,10 +12,16 @@ dependencies = [
 
 [project.scripts]
 browser-scout = "browser_scout.server:main"
+workflow-run = "browser_scout.executor:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: tests requiring a real browser (deselect with -m 'not integration')",
+]
 
 [dependency-groups]
 dev = [

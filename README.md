@@ -52,9 +52,27 @@ After completing a workflow interactively, export it as a replayable script:
 
 Produces two files in `workflows/`:
 - A Python script with numbered, commented steps
-- A portable JSON workflow definition
+- A portable JSON workflow definition (replayable with `workflow-run`)
 
 Credentials are automatically parameterized — real values never appear in the output.
+
+### `workflow-run`
+
+Replay an exported workflow JSON file without Claude in the loop:
+
+```
+workflow-run workflows/paycom-census-export.json \
+  --var USERNAME=admin --var PASSWORD=s3cret
+```
+
+Variables are resolved from CLI args, environment variables, or workflow defaults (in that order). Credential values are masked in output.
+
+```
+workflow-run workflows/my-workflow.json --dry-run    # validate and print plan
+workflow-run workflows/my-workflow.json --headless   # run headless
+```
+
+Each step emits a JSON log line to stdout. Exit code 0 on success, 1 on step failure, 2 on validation error.
 
 ### Conversational Automation
 
