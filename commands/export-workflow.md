@@ -2,7 +2,7 @@
 description: Export the current browser session as a replayable workflow (Python script + portable JSON)
 argument-hint: "[workflow-name]"
 allowed-tools:
-  - "mcp__plugin_browser-scout_browser-scout__*"
+  - "mcp__plugin_otto-marketplace_otto__*"
 ---
 
 Generate both a self-contained Python script and a portable workflow JSON file from the current browser session. Follow these steps precisely:
@@ -53,7 +53,7 @@ Structure the script exactly like this:
 
 ```python
 """Workflow: <workflow-name>
-Generated from browser-scout session on <date>.
+Generated from Otto session on <date>.
 Session: <session_id> | Actions: <count> | Duration: <if available>
 """
 import time
@@ -96,7 +96,7 @@ Rules for the script:
 
 ## Step 5b: Generate workflow JSON
 
-In addition to the Python script, generate a portable workflow JSON file using the `WorkflowConverter` from `src/browser_scout/workflow.py`:
+In addition to the Python script, generate a portable workflow JSON file using the `WorkflowConverter` from `src/otto/workflow.py`:
 
 1. Build a `Workflow` model by calling `WorkflowConverter.from_history(history, name=workflow_name, description=description)`
    - `history` is the `SessionHistory` from Step 1

@@ -1,9 +1,9 @@
 {
-  "name": "browser-scout",
+  "name": "otto",
   "version": "0.1.0",
-  "description": "Stealth browser reconnaissance for automating websites with anti-detection. Scout page structure, execute actions, monitor network, then compose botasaurus-driver scripts with anti-detection enabled.",
+  "description": "Stealth browser automation for websites with anti-detection. Scout page structure, execute actions, monitor network, then compose botasaurus-driver scripts.",
   "author": {
     "name": "sdoherty"
   },
-  "keywords": ["browser", "automation", "reconnaissance", "anti-detection", "stealth", "botasaurus"]
+  "keywords": ["browser", "automation", "anti-detection", "stealth", "botasaurus"]
 }

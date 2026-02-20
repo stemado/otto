@@ -66,7 +66,7 @@ class WorkflowSource(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    tool: str = "browser-scout"
+    tool: str = "otto"
     session_id: str = ""
 
 
@@ -94,7 +94,7 @@ _USERNAME_PATTERNS = re.compile(
 
 
 class WorkflowConverter:
-    """Converts a browser-scout SessionHistory into a portable Workflow."""
+    """Converts a otto SessionHistory into a portable Workflow."""
 
     @staticmethod
     def from_history(
@@ -178,7 +178,7 @@ class WorkflowConverter:
         return Workflow(
             name=name,
             description=description,
-            source=WorkflowSource(tool="browser-scout", session_id=history.session_id),
+            source=WorkflowSource(tool="otto", session_id=history.session_id),
             variables=variables,
             steps=steps,
         )

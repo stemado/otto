@@ -2,7 +2,7 @@
 description: Launch a stealth browser and scout a website's page structure
 argument-hint: "<url>"
 allowed-tools:
-  - "mcp__plugin_browser-scout_browser-scout__*"
+  - "mcp__plugin_otto-marketplace_otto__*"
 ---
 
 Launch a stealth browser session and perform reconnaissance on the provided URL. Follow these steps:

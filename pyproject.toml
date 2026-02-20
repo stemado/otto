@@ -1,7 +1,7 @@
 [project]
-name = "browser-scout"
+name = "otto"
 version = "0.1.0"
-description = "Stealth browser reconnaissance MCP server for Claude Code"
+description = "Stealth browser automation for Claude Code"
 requires-python = ">=3.11"
 dependencies = [
     "mcp[cli]>=1.0.0",
@@ -11,8 +11,8 @@ dependencies = [
 ]
 
 [project.scripts]
-browser-scout = "browser_scout.server:main"
-workflow-run = "browser_scout.executor:main"
+otto = "otto.server:main"
+workflow-run = "otto.executor:main"
 
 [build-system]
 requires = ["hatchling"]

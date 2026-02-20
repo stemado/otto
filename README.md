@@ -1,14 +1,14 @@
-# Browser Scout
+# Otto
 
 Automate any website by describing what you want in plain English. No web development knowledge required.
 
-Browser Scout is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that gives Claude a real browser it can see and control. You describe the task — "log into Paycom, navigate to Census, export the CSV" — and Claude figures out the website for you: the nested iframes, the shadow DOM, the XHR calls, the authentication flow. Then it writes a production-grade automation script you can run on a schedule without Claude.
+Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that gives Claude a real browser it can see and control. You describe the task — "log into Paycom, navigate to Census, export the CSV" — and Claude figures out the website for you: the nested iframes, the shadow DOM, the XHR calls, the authentication flow. Then it writes a production-grade automation script you can run on a schedule without Claude.
 
 ## Why This Exists
 
 Writing browser automation for enterprise portals is painful. The login form is inside a triple-nested iframe. The export button triggers an XHR that returns a signed URL. The page detects Playwright and blocks you.
 
-Browser Scout solves all three problems:
+Otto solves all three problems:
 
 1. **You don't need to understand the website.** Claude scouts the page structure, discovers what's actually there, and uses exact selectors from reconnaissance — not guesses.
 2. **You don't need to write code.** Describe the workflow conversationally. Claude drives the browser step by step, then exports a standalone script.
@@ -19,8 +19,8 @@ Browser Scout solves all three problems:
 ## Install
 
 ```
-/plugin marketplace add stemado/browser-scout-marketplace
-/plugin install browser-scout@browser-scout-marketplace
+/plugin marketplace add stemado/otto-marketplace
+/plugin install otto@otto-marketplace
 ```
 
 ## Requirements
@@ -96,7 +96,7 @@ The plugin exposes 11 tools via MCP:
 
 There are several ways to give Claude browser access. They solve different problems.
 
-| | Browser Scout | [Dev-Browser](https://github.com/SawyerHood/dev-browser) | [Claude in Chrome](https://code.claude.com/docs/en/chrome) | [Playwright MCP](https://browsermcp.io/) |
+| | Otto | [Dev-Browser](https://github.com/SawyerHood/dev-browser) | [Claude in Chrome](https://code.claude.com/docs/en/chrome) | [Playwright MCP](https://browsermcp.io/) |
 | --- | --- | --- | --- | --- |
 | **Primary use case** | Automate sites you've never seen before | Test your own app during development | Debug and inspect pages interactively | Cross-browser test automation |
 | **Anti-detection** | Yes (Botasaurus stealth) | No (Playwright) | No (your real browser) | No (Playwright) |
@@ -106,7 +106,7 @@ There are several ways to give Claude browser access. They solve different probl
 | **Credential security** | `.env` injection, never in conversation | N/A | Uses your browser's sessions | N/A |
 | **Handles iframes + shadow DOM** | Auto-discovered and navigated | Manual | Manual | Manual |
 
-**When to use Browser Scout:** You need to automate an enterprise portal, HR system, or third-party site where you don't control the HTML, the page uses anti-bot detection, and you want a script that runs unattended.
+**When to use Otto:** You need to automate an enterprise portal, HR system, or third-party site where you don't control the HTML, the page uses anti-bot detection, and you want a script that runs unattended.
 
 **When to use something else:** If you're testing your own app (Dev-Browser), debugging a page you're already looking at (Claude in Chrome), or running cross-browser test suites (Playwright MCP).
 

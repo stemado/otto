@@ -1,6 +1,6 @@
-### Browser Automation Reconnaissance — Botasaurus Scout MCP
+### Otto — Stealth Browser Automation MCP
 
-You have access to a live browser automation reconnaissance system via the `browser-scout` MCP server. This system launches a stealth browser session (via Botasaurus, which handles anti-detection and fingerprint evasion) and lets you interactively explore websites through Chrome DevTools Protocol.
+You have access to a live browser automation system via the `otto` MCP server. This system launches a stealth browser session (via Botasaurus, which handles anti-detection and fingerprint evasion) and lets you interactively explore websites through Chrome DevTools Protocol.
 
 #### Philosophy
 
@@ -80,7 +80,7 @@ When filling credential fields (passwords, API keys, tokens), use the `fill_secr
 - The response only confirms how many characters were typed (no value exposure)
 - Session history records `${PAYCOM_PASSWORD}` instead of the actual password
 
-The `.env` file is found automatically in the server's working directory. For custom locations, set `BROWSER_SCOUT_ENV_FILE` in `.mcp.json` env config.
+The `.env` file is found automatically in the server's working directory. For custom locations, set `OTTO_ENV_FILE` in `.mcp.json` env config.
 
 #### What This System Cannot Do
 
@@ -107,9 +107,9 @@ The `.mcp.json` uses `${CLAUDE_PLUGIN_ROOT}` which resolves to this **cache dire
 ```json
 {
   "mcpServers": {
-    "browser-scout": {
+    "otto": {
       "command": "uv",
-      "args": ["run", "--directory", "D:/Projects/browser-scout", "browser-scout"]
+      "args": ["run", "--directory", "D:/Projects/otto", "otto"]
     }
   }
 }
@@ -119,7 +119,7 @@ This makes `uv run` always execute from the live source directory. Changes are p
 
 **Key details:**
 
-- The file to edit is `~/.claude/plugins/cache/browser-scout-marketplace/browser-scout/0.1.0/.mcp.json`
+- The file to edit is `~/.claude/plugins/cache/otto-marketplace/otto/0.1.0/.mcp.json`
 - `installed_plugins.json` `installPath` does NOT control MCP server path resolution — the cache path is computed algorithmically from marketplace/plugin/version
 - Re-installing the plugin will overwrite this edit (restoring `${CLAUDE_PLUGIN_ROOT}`), so re-apply after any `/plugin update`
 - Skills, commands, agents, and hooks are loaded from `installPath`, but MCP servers use the cache's `.mcp.json` independently

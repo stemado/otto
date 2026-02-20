@@ -8,8 +8,8 @@ import time
 
 import pytest
 
-from browser_scout.actions import execute_action
-from browser_scout.session import BrowserSession
+from otto.actions import execute_action
+from otto.session import BrowserSession
 
 pytestmark = pytest.mark.integration
 

@@ -2,7 +2,7 @@
 
 Search order for the .env file:
     1. Explicit ``env_file`` path (if provided to :func:`load_env_vars`)
-    2. ``BROWSER_SCOUT_ENV_FILE`` environment variable
+    2. ``OTTO_ENV_FILE`` environment variable
     3. ``.env`` in the current working directory
 
 Uses ``python-dotenv``'s :func:`dotenv_values` for parsing.
@@ -33,8 +33,8 @@ def _resolve_env_path(env_file: str | None = None) -> Path:
             raise EnvLoadError(f".env file not found: {p}")
         return p
 
-    # 2. BROWSER_SCOUT_ENV_FILE env var
-    env_var = os.environ.get("BROWSER_SCOUT_ENV_FILE")
+    # 2. OTTO_ENV_FILE env var
+    env_var = os.environ.get("OTTO_ENV_FILE")
     if env_var:
         p = Path(env_var)
         if not p.is_file():
@@ -47,7 +47,7 @@ def _resolve_env_path(env_file: str | None = None) -> Path:
         return cwd_env
 
     raise EnvLoadError(
-        "No .env file found. Searched: BROWSER_SCOUT_ENV_FILE env var, "
+        "No .env file found. Searched: OTTO_ENV_FILE env var, "
         f".env in cwd ({Path.cwd()})"
     )
 

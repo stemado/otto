@@ -6,9 +6,9 @@ Run manually: uv run pytest tests/test_integration.py -v -s
 
 import json
 import pytest
-from browser_scout.scout import scout_page, build_element_summary, filter_elements
-from browser_scout.session import BrowserSession
-from browser_scout.history import SessionHistoryTracker
+from otto.scout import scout_page, build_element_summary, filter_elements
+from otto.session import BrowserSession
+from otto.history import SessionHistoryTracker
 
 pytestmark = pytest.mark.integration
 

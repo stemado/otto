@@ -1,14 +1,14 @@
 {
-  "name": "browser-scout-marketplace",
+  "name": "otto-marketplace",
   "owner": {
     "name": "sdoherty"
   },
   "plugins": [
     {
-      "name": "browser-scout",
+      "name": "otto",
       "source": "./",
-      "description": "Stealth browser reconnaissance for automating websites with anti-detection",
-      "keywords": ["browser", "automation", "reconnaissance", "anti-detection", "stealth", "botasaurus"]
+      "description": "Stealth browser automation for websites with anti-detection",
+      "keywords": ["browser", "automation", "anti-detection", "stealth", "botasaurus"]
     }
   ]
 }

@@ -1,7 +1,7 @@
 """Tests for element summary generation and query/filter logic."""
 
-from browser_scout.models import InteractiveElement
-from browser_scout.scout import build_element_summary, filter_elements
+from otto.models import InteractiveElement
+from otto.scout import build_element_summary, filter_elements
 
 
 def _make_element(

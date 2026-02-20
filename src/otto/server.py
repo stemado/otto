@@ -1,4 +1,4 @@
-"""Browser Scout MCP Server — stealth browser reconnaissance for Claude Code."""
+"""Otto MCP Server — stealth browser automation for Claude Code."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 # --- MCP Server Instance ---
 
-mcp = FastMCP("browser-scout", lifespan=app_lifespan)
+mcp = FastMCP("otto", lifespan=app_lifespan)
 
 
 def _get_ctx(ctx: Context) -> AppContext:

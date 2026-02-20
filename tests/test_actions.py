@@ -6,13 +6,13 @@ Run manually: uv run pytest tests/test_actions.py -v -s
 
 import pytest
 
-from browser_scout.actions import (
+from otto.actions import (
     execute_action,
     inspect_element,
     run_javascript,
     take_screenshot,
 )
-from browser_scout.session import BrowserSession
+from otto.session import BrowserSession
 
 pytestmark = pytest.mark.integration
 

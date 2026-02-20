@@ -1,4 +1,4 @@
-"""Tests for browser_scout.secrets -- .env loading with search order."""
+"""Tests for otto.secrets -- .env loading with search order."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from browser_scout.secrets import EnvLoadError, load_env_vars
+from otto.secrets import EnvLoadError, load_env_vars
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +117,7 @@ def test_error_when_file_does_not_exist() -> None:
 
 def test_error_when_no_env_anywhere(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Raises EnvLoadError when no .env file can be found via any search path."""
-    monkeypatch.delenv("BROWSER_SCOUT_ENV_FILE", raising=False)
+    monkeypatch.delenv("OTTO_ENV_FILE", raising=False)
     monkeypatch.chdir(tmp_path)  # empty directory, no .env
     with pytest.raises(EnvLoadError, match="No .env file found"):
         load_env_vars()
@@ -131,7 +131,7 @@ def test_error_when_no_env_anywhere(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_env_var_overrides_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """BROWSER_SCOUT_ENV_FILE env var takes precedence over cwd .env."""
+    """OTTO_ENV_FILE env var takes precedence over cwd .env."""
     # Create .env in cwd with one value
     cwd_env = tmp_path / "cwd"
     cwd_env.mkdir()
@@ -143,7 +143,7 @@ def test_env_var_overrides_cwd(
     custom_env.write_text("SOURCE=env_var\n")
 
     monkeypatch.chdir(cwd_env)
-    monkeypatch.setenv("BROWSER_SCOUT_ENV_FILE", str(custom_env))
+    monkeypatch.setenv("OTTO_ENV_FILE", str(custom_env))
 
     result = load_env_vars()
     assert result["SOURCE"] == "env_var"
@@ -152,7 +152,7 @@ def test_env_var_overrides_cwd(
 def test_falls_back_to_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Falls back to .env in cwd when no explicit path or env var is set."""
     (tmp_path / ".env").write_text("SOURCE=cwd_fallback\n")
-    monkeypatch.delenv("BROWSER_SCOUT_ENV_FILE", raising=False)
+    monkeypatch.delenv("OTTO_ENV_FILE", raising=False)
     monkeypatch.chdir(tmp_path)
 
     result = load_env_vars()
@@ -162,12 +162,12 @@ def test_falls_back_to_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
 def test_explicit_path_takes_highest_priority(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Explicit env_file argument beats BROWSER_SCOUT_ENV_FILE and cwd."""
+    """Explicit env_file argument beats OTTO_ENV_FILE and cwd."""
     # Setup env var pointing to one file
     env_var_file = tmp_path / "via_env_var" / ".env"
     env_var_file.parent.mkdir()
     env_var_file.write_text("SOURCE=env_var\n")
-    monkeypatch.setenv("BROWSER_SCOUT_ENV_FILE", str(env_var_file))
+    monkeypatch.setenv("OTTO_ENV_FILE", str(env_var_file))
 
     # Setup cwd with another file
     cwd_dir = tmp_path / "cwd"

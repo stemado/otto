@@ -2,8 +2,8 @@
 
 import json
 
-from browser_scout.models import ActionRecord, SessionHistory
-from browser_scout.workflow import (
+from otto.models import ActionRecord, SessionHistory
+from otto.workflow import (
     Workflow,
     WorkflowConverter,
     WorkflowSettings,
@@ -229,7 +229,7 @@ def test_converter_auto_generates_step_names():
 def test_converter_sets_source():
     history = _make_history([], session_id="sess-abc")
     workflow = WorkflowConverter.from_history(history, name="test")
-    assert workflow.source.tool == "browser-scout"
+    assert workflow.source.tool == "otto"
     assert workflow.source.session_id == "sess-abc"
 
 
@@ -287,7 +287,7 @@ def test_full_adp_workflow_from_design_doc():
     workflow = Workflow(
         name="adp-report-download",
         description="Log into ADP WFN and download the Unum LTD FMLA report",
-        source=WorkflowSource(tool="browser-scout", session_id="abc123"),
+        source=WorkflowSource(tool="otto", session_id="abc123"),
         variables={
             "USERNAME": WorkflowVariable(type="credential", default="your_username"),
             "PASSWORD": WorkflowVariable(type="credential", default="your_password"),

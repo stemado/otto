@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "browser-scout": {
+    "otto": {
       "command": "uv",
-      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "browser-scout"]
+      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "otto"]
     }
   }
 }

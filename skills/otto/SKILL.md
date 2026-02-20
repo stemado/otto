@@ -1,9 +1,9 @@
 ---
-name: browser-scout
+name: otto
 description: "Use when the user asks to automate a website, scout a page, explore page structure, build an automation script from reconnaissance, navigate a portal, log into a site, inspect iframes or shadow DOM, monitor network calls during browser interaction, or download files from a web application. Trigger phrases include scout, automate this site, explore this page, figure out how this works, build an automation script, build a bot, log into, what does this page look like, check the network calls, navigate to, stealth browser, anti-detection, find elements, find the button."
 ---
 
-You have access to a live stealth browser reconnaissance system via the `browser-scout` MCP server. It launches an anti-detection browser (Botasaurus) and lets you interactively explore websites through Chrome DevTools Protocol.
+You have access to a live stealth browser reconnaissance system via the `otto` MCP server. It launches an anti-detection browser (Botasaurus) and lets you interactively explore websites through Chrome DevTools Protocol.
 
 ## Philosophy
 

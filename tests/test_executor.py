@@ -8,14 +8,14 @@ from unittest.mock import patch
 
 import pytest
 
-from browser_scout.executor import (
+from otto.executor import (
     dry_run,
     mask_credential_value,
     needs_pre_monitoring,
     resolve_error_policy,
     resolve_variables,
 )
-from browser_scout.workflow import Workflow, WorkflowStep, WorkflowVariable
+from otto.workflow import Workflow, WorkflowStep, WorkflowVariable
 
 
 def _make_workflow(**kwargs) -> Workflow:
@@ -206,7 +206,7 @@ def test_dry_run_cli_valid_workflow(tmp_path):
     workflow_file.write_text(json.dumps(workflow_json))
 
     result = subprocess.run(
-        [sys.executable, "-m", "browser_scout.executor", str(workflow_file),
+        [sys.executable, "-m", "otto.executor", str(workflow_file),
          "--dry-run", "--var", "USERNAME=admin"],
         capture_output=True, text=True,
     )
@@ -224,7 +224,7 @@ def test_dry_run_cli_invalid_json(tmp_path):
     workflow_file.write_text("not json")
 
     result = subprocess.run(
-        [sys.executable, "-m", "browser_scout.executor", str(workflow_file), "--dry-run"],
+        [sys.executable, "-m", "otto.executor", str(workflow_file), "--dry-run"],
         capture_output=True, text=True,
     )
     assert result.returncode == 2
@@ -232,7 +232,7 @@ def test_dry_run_cli_invalid_json(tmp_path):
 
 def test_dry_run_cli_missing_file():
     result = subprocess.run(
-        [sys.executable, "-m", "browser_scout.executor", "/nonexistent/workflow.json", "--dry-run"],
+        [sys.executable, "-m", "otto.executor", "/nonexistent/workflow.json", "--dry-run"],
         capture_output=True, text=True,
     )
     assert result.returncode == 2

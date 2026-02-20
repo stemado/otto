@@ -2,7 +2,7 @@
 
 ### Problem Statement
 
-Browser-scout generates workflow JSON files via `/export-workflow`, but nothing can replay them without Claude in the loop. Building a standalone `WorkflowExecutor` + `workflow-run` CLI enables:
+Otto generates workflow JSON files via `/export-workflow`, but nothing can replay them without Claude in the loop. Building a standalone `WorkflowExecutor` + `workflow-run` CLI enables:
 - Scheduled/automated workflow execution (nightly report downloads)
 - CI/CD integration
 - Workflow testing and validation without an MCP server
@@ -18,7 +18,7 @@ Browser-scout generates workflow JSON files via `/export-workflow`, but nothing 
 
 ### Approach
 
-Single new module `src/browser_scout/executor.py` with 4 independently testable layers:
+Single new module `src/otto/executor.py` with 4 independently testable layers:
 
 1. **Variable resolver** — resolves `${VAR}` references (CLI args → env → defaults)
 2. **Error policy + look-ahead** — step-level override of global policy; pre-start monitoring before wait steps
@@ -29,11 +29,11 @@ Single new module `src/browser_scout/executor.py` with 4 independently testable 
 
 | Action | File | Description |
 |--------|------|-------------|
-| Create | `src/browser_scout/executor.py` | Core executor + CLI (~300 lines) |
+| Create | `src/otto/executor.py` | Core executor + CLI (~300 lines) |
 | Create | `tests/test_executor.py` | Unit tests (~200 lines) |
 | Modify | `pyproject.toml` | Add `workflow-run` script entry point |
 
-No changes to existing browser-scout functionality.
+No changes to existing otto functionality.
 
 ### Sequence
 
@@ -80,7 +80,7 @@ Add `main()` CLI function + `dry_run()`:
 
 - argparse: `workflow-run <file> [--var KEY=VALUE] [--headless] [--download-dir] [--screenshot-dir] [--dry-run] [--timeout]`
 - `dry_run()` — validates, resolves variables, prints JSON plan (credentials masked)
-- `if __name__ == "__main__":` guard for `python -m browser_scout.executor` support
+- `if __name__ == "__main__":` guard for `python -m otto.executor` support
 
 Tests (subprocess + direct):
 - Dry-run valid workflow: verifies JSON output structure, credential masking
@@ -89,7 +89,7 @@ Tests (subprocess + direct):
 
 #### Task 4: pyproject.toml Entry Point + Verification
 
-- Add `workflow-run = "browser_scout.executor:main"` to `[project.scripts]`
+- Add `workflow-run = "otto.executor:main"` to `[project.scripts]`
 - Reinstall package (`uv pip install -e .`)
 - Verify `workflow-run --help` works
 - Run full test suite (existing 50+ tests + new executor tests)

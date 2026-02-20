@@ -1,4 +1,4 @@
-"""Data models for Browser Scout MCP server."""
+"""Data models for Otto MCP server."""
 
 from __future__ import annotations
 

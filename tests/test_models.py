@@ -1,6 +1,6 @@
-"""Tests for browser-scout Pydantic models."""
+"""Tests for otto Pydantic models."""
 
-from browser_scout.models import (
+from otto.models import (
     ActionResult,
     ElementInspection,
     ElementSummary,
@@ -335,7 +335,7 @@ def test_session_history_defaults():
 
 
 def test_fill_secret_result_success():
-    from browser_scout.models import FillSecretResult
+    from otto.models import FillSecretResult
 
     result = FillSecretResult(
         success=True,
@@ -352,7 +352,7 @@ def test_fill_secret_result_success():
 
 
 def test_fill_secret_result_error():
-    from browser_scout.models import FillSecretResult
+    from otto.models import FillSecretResult
 
     result = FillSecretResult(
         success=False,
@@ -367,7 +367,7 @@ def test_fill_secret_result_error():
 
 
 def test_fill_secret_result_serialization():
-    from browser_scout.models import FillSecretResult
+    from otto.models import FillSecretResult
 
     result = FillSecretResult(
         success=True,

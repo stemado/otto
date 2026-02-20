@@ -1,7 +1,7 @@
 """
 Paycom bC Census Export — Botasaurus-Driver Automation Script
 =============================================================
-Generated from browser-scout reconnaissance session 533fd2b4ddf0.
+Generated from Otto session 533fd2b4ddf0.
 Uses botasaurus-driver for anti-detection and stealth browsing.
 
 Workflow: Login → 2FA (SMS via Twilio) → Generate Report → Download CSV → Logout

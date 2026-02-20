@@ -1,10 +1,10 @@
-# Getting Started with Browser Scout
+# Getting Started with Otto
 
 This guide walks you through installation, your first session, credential handling, and exporting replayable workflows. If you've never used the plugin before, start here.
 
 ## What Is It?
 
-Browser Scout gives Claude Code a stealth browser it can drive interactively. You tell Claude to go to a website, and it launches a real Chrome window with anti-detection baked in (via Botasaurus). Claude can then click around, fill forms, inspect page structure, capture network traffic, and ultimately generate a replayable automation script — all through conversation.
+Otto gives Claude Code a stealth browser it can drive interactively. You tell Claude to go to a website, and it launches a real Chrome window with anti-detection baked in (via Botasaurus). Claude can then click around, fill forms, inspect page structure, capture network traffic, and ultimately generate a replayable automation script — all through conversation.
 
 Think of it as giving Claude its own browser DevTools session.
 
@@ -23,18 +23,18 @@ You need three things installed before the plugin will work:
 Two commands in Claude Code:
 
 ```
-/plugin marketplace add stemado/browser-scout-marketplace
+/plugin marketplace add stemado/otto-marketplace
 ```
 
 This registers the marketplace (a pointer to the GitHub repo — not a centralized store). Then install the plugin:
 
 ```
-/plugin install browser-scout@browser-scout-marketplace
+/plugin install otto@otto-marketplace
 ```
 
 That's it. Claude Code snapshots the plugin into its cache, registers the MCP server, and makes the skills and commands available.
 
-Under the hood, the plugin gets cached to `~/.claude/plugins/cache/browser-scout-marketplace/browser-scout/0.1.0/`. The MCP server config inside that cache tells Claude Code how to launch the Python server via `uv run`.
+Under the hood, the plugin gets cached to `~/.claude/plugins/cache/otto-marketplace/otto/0.1.0/`. The MCP server config inside that cache tells Claude Code how to launch the Python server via `uv run`.
 
 ## Your First Session
 
@@ -77,7 +77,7 @@ Claude uses the `fill_secret` tool — the actual value is read server-side, typ
 
 This is a deliberate security design. The `.env` file should be gitignored, and credentials are parameterized in both conversation history and exported scripts. You can safely share scripts and session logs without leaking secrets.
 
-The `.env` search order is: explicit path > `BROWSER_SCOUT_ENV_FILE` env var > `.env` in the current working directory.
+The `.env` search order is: explicit path > `OTTO_ENV_FILE` env var > `.env` in the current working directory.
 
 ## Exporting a Replayable Script
 

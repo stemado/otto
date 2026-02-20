@@ -376,7 +376,7 @@ def main() -> None:
     """CLI entry point for workflow-run."""
     parser = argparse.ArgumentParser(
         prog="workflow-run",
-        description="Execute a browser-scout workflow JSON file",
+        description="Execute an Otto workflow JSON file",
     )
     parser.add_argument("workflow", help="Path to the workflow JSON file")
     parser.add_argument(
