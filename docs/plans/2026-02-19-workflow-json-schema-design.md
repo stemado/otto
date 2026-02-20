@@ -9,7 +9,7 @@ Browser-scout generates session histories (action logs, scout data, network even
 
 1. A Python executor to replay workflows without Claude in the loop
 2. Workflow storage, versioning, and sharing
-3. Future multi-runtime support (Playwright, C# backend)
+3. Future multi-runtime support (C# backend)
 
 ## Prior Art
 

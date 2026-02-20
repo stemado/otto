@@ -9,9 +9,12 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Literal
 
+import base64
+import json
+
 from mcp.server.fastmcp import Context, FastMCP
-from mcp.server.fastmcp.utilities.types import Image
 from mcp.server.session import ServerSession
+from mcp.types import CallToolResult, ImageContent, TextContent
 
 from .actions import execute_action, inspect_element, run_javascript, take_screenshot
 from .models import (
@@ -539,11 +542,14 @@ async def take_screenshot_tool(
 
     await ctx.info(f"Screenshot captured: {result.byte_size} bytes ({format})")
 
-    # Return metadata dict + Image for inline display
-    return [
-        result.model_dump(exclude_none=True),
-        Image(data=raw_bytes, format=format),
-    ]
+    # Return metadata as text + image inline for visual display
+    mime = f"image/{format}"
+    return CallToolResult(
+        content=[
+            TextContent(type="text", text=json.dumps(result.model_dump(exclude_none=True))),
+            ImageContent(type="image", data=base64.b64encode(raw_bytes).decode(), mimeType=mime),
+        ]
+    )
 
 
 # --- Tool: inspect_element ---
@@ -678,7 +684,7 @@ async def get_session_history(
     """Return the complete structured history of a browser session.
 
     Includes every action taken, every scout report (summarized), every network event
-    captured, and the sequence of URLs visited. Use this data to compose Playwright scripts.
+    captured, and the sequence of URLs visited. Use this data to compose botasaurus-driver scripts.
 
     Args:
         session_id: Active session ID.

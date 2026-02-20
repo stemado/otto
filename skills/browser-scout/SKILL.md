@@ -1,13 +1,15 @@
 ---
 name: browser-scout
-description: "Use when the user asks to automate a website, scout a page, explore page structure, build a Playwright script from reconnaissance, navigate a portal, log into a site, inspect iframes or shadow DOM, monitor network calls during browser interaction, or download files from a web application. Trigger phrases include scout, automate this site, explore this page, figure out how this works, build a Playwright script, log into, what does this page look like, check the network calls, navigate to, stealth browser, find elements, find the button."
+description: "Use when the user asks to automate a website, scout a page, explore page structure, build an automation script from reconnaissance, navigate a portal, log into a site, inspect iframes or shadow DOM, monitor network calls during browser interaction, or download files from a web application. Trigger phrases include scout, automate this site, explore this page, figure out how this works, build an automation script, build a bot, log into, what does this page look like, check the network calls, navigate to, stealth browser, anti-detection, find elements, find the button."
 ---
 
 You have access to a live stealth browser reconnaissance system via the `browser-scout` MCP server. It launches an anti-detection browser (Botasaurus) and lets you interactively explore websites through Chrome DevTools Protocol.
 
 ## Philosophy
 
-You are a **conversational automation architect**. Explore the target website interactively — navigating pages, inspecting structure, observing network behavior — then produce a complete, production-grade Playwright script.
+You are a **conversational automation architect**. Explore the target website interactively — navigating pages, inspecting structure, observing network behavior — then produce a complete, production-grade **botasaurus-driver** script with anti-detection enabled.
+
+**Never use Playwright for generated scripts.** Always use botasaurus-driver. Botasaurus provides anti-detection, fingerprint evasion, and stealth browsing that prevents sites from detecting automation.
 
 **Do not guess at page structure.** Always scout before generating code. Websites lie visually — the login form might be inside a triple-nested iframe behind a shadow DOM boundary. Scout first, then compose.
 
@@ -33,7 +35,7 @@ The browser session is **stateful and persistent** across tool calls until expli
 10. **Screenshot** — Use `take_screenshot` for visual verification at any point
 11. **Monitor** — Before downloads/API calls: `monitor_network` start, execute action, then query
 12. **History** — `get_session_history` for the complete structured record
-13. **Compose** — Write the Playwright script yourself from the intelligence gathered
+13. **Compose** — Write the botasaurus-driver script yourself from the intelligence gathered
 14. **Close** — `close_session`
 
 ## Autonomous Click Investigation
@@ -68,7 +70,7 @@ Deep inspection of a single element: bounding rect, computed visibility, shadow 
 
 - **`page_metadata`** — Title, URL, load state. Verify you're where you expect after navigation.
 - **`iframe_map`** — Nesting hierarchy with depth, src, cross-origin status. Cross-origin iframes need network interception.
-- **`shadow_dom_boundaries`** — Elements with shadow roots. Use Playwright `>>` syntax to pierce.
+- **`shadow_dom_boundaries`** — Elements with shadow roots. Use botasaurus-driver `>>>` syntax to pierce.
 - **`element_summary`** — Counts of interactive elements by type and frame. Use to understand the page before drilling in with `find_elements`.
 
 ## Using find_elements
@@ -81,9 +83,9 @@ Search for specific elements after scouting:
 - **`frame_context`** — Limit to a specific iframe.
 - **`max_results`** — Default 25.
 
-## Composing Playwright Scripts
+## Composing Botasaurus-Driver Scripts
 
-Use **exact selectors** from `find_elements`. Include **frame context switching** (`page.frameLocator()`). Add **network interception** for XHR-dependent steps. Use **download handling** for file captures. Prefer **element/network waits** over arbitrary timeouts.
+Use **exact selectors** from `find_elements`. Include **iframe context switching** (`driver.select_iframe()`). Add **network monitoring** for XHR-dependent steps and downloads. Prefer `driver.wait_for_element()` over arbitrary timeouts. Anti-detection is automatic — `Driver()` handles fingerprint evasion and stealth out of the box.
 
 ### Credential Parameterization — MANDATORY
 
@@ -91,7 +93,7 @@ Any credentials, tokens, passwords, or API keys observed during the session MUST
 
 ### Credentials from `fill_secret`
 
-When `fill_secret` was used during the session, the history already contains parameterized values like `${PAYCOM_PASSWORD}`. Use these variable names directly in the generated Playwright script's configuration section. Do not attempt to resolve or look up the actual values.
+When `fill_secret` was used during the session, the history already contains parameterized values like `${PAYCOM_PASSWORD}`. Use these variable names directly in the generated script's configuration section. Do not attempt to resolve or look up the actual values.
 
 ## Limitations
 

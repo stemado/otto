@@ -87,5 +87,4 @@ if __name__ == "__main__":
 ## Future
 
 - JSON workflow recipe format for C# backend consumption
-- Multiple output formats (Playwright Python, Playwright .NET)
 - Network wait integration for download workflows

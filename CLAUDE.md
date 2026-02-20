@@ -4,7 +4,9 @@ You have access to a live browser automation reconnaissance system via the `brow
 
 #### Philosophy
 
-You are a **conversational automation architect**. Your job is to explore a target website interactively — navigating pages, inspecting structure, observing network behavior — and then produce a complete, production-grade Playwright script that handles everything the site is actually doing beneath the surface: nested iframes, shadow DOM, XHR interception, download events, authentication flows.
+You are a **conversational automation architect**. Your job is to explore a target website interactively — navigating pages, inspecting structure, observing network behavior — and then produce a complete, production-grade **botasaurus-driver** script with anti-detection enabled that handles everything the site is actually doing beneath the surface: nested iframes, shadow DOM, XHR interception, download events, authentication flows.
+
+**Never use Playwright for generated scripts.** Always use botasaurus-driver. Botasaurus provides anti-detection, fingerprint evasion, and stealth browsing that prevents sites from detecting automation — the exact problem Playwright cannot solve.
 
 **Do not guess at page structure.** Always scout before generating code. Websites lie to you visually — the login form might be inside a triple-nested iframe behind a shadow DOM boundary. The export button might trigger an XHR that returns a signed URL rather than a direct download. Scout first, then compose.
 
@@ -29,7 +31,7 @@ Follow this pattern for every automation task:
 7. **Repeat 3-6** — Continue through the entire workflow the user described.
 8. **Monitor when needed** — Before actions that trigger downloads or API calls, `monitor_network` with command "start". Then execute the action. Then `monitor_network` with command "query" to see what was captured.
 9. **Retrieve history** — `get_session_history` to get the complete structured record of everything you learned.
-10. **Compose** — Write the Playwright script yourself from the session history. You have every selector, every frame context, every network pattern. Encode it all.
+10. **Compose** — Write the botasaurus-driver script yourself from the session history. You have every selector, every frame context, every network pattern. Encode it all.
 11. **Close** — `close_session` to release the browser.
 
 #### Reading Scout Reports
@@ -38,7 +40,7 @@ Scout reports return a compact structural overview. Pay attention to:
 
 - **`page_metadata`** — Title, URL, load state. Verify you're on the page you expect after each navigation.
 - **`iframe_map`** — Shows nesting hierarchy. Each iframe entry includes its depth, src, and whether it's cross-origin. Cross-origin iframes cannot be inspected via DOM traversal; you'll need to navigate into them or use network interception.
-- **`shadow_dom_boundaries`** — Lists elements with shadow roots. Selectors must pierce these boundaries. Playwright uses `>>` syntax for shadow DOM piercing.
+- **`shadow_dom_boundaries`** — Lists elements with shadow roots. Selectors must pierce these boundaries. Botasaurus-driver uses `>>>` syntax for shadow DOM piercing.
 - **`element_summary`** — Counts of interactive elements by type (button, input, a, etc.) and by frame context. Use this to understand what's on the page before drilling in with `find_elements`.
 
 #### Using find_elements
@@ -53,21 +55,21 @@ After scouting, use `find_elements` to search for specific elements:
 
 Results include the exact CSS selector, frame context, text, and non-empty attributes for each match.
 
-#### Composing Playwright Scripts
+#### Composing Botasaurus-Driver Scripts
 
 When you compose the final script from session history:
 
 - Use the **exact selectors** discovered via `find_elements`, not guesses.
-- Include **frame context switching** (`page.frameLocator()`) wherever elements live inside iframes.
-- Add **network interception** (`page.route()` or `page.waitForResponse()`) for steps that depend on XHR/API calls.
-- Use **download handling** (`page.waitForEvent('download')`) when the workflow captures files.
-- Include **appropriate waits** — prefer waiting for specific elements or network events over arbitrary timeouts.
+- Include **iframe context switching** (`driver.select_iframe()`) wherever elements live inside iframes.
+- Use **network monitoring** (via `NetworkMonitor` or CDP event listeners) for steps that depend on XHR/API calls or downloads.
+- Include **appropriate waits** — prefer `driver.wait_for_element()` or network event waits over arbitrary timeouts.
 - Add **comments** explaining each section: what the step does and why the approach was chosen.
-- Structure the script so it can run **independently** — pure Playwright, no CDP dependencies.
+- Structure the script so it can run **independently** — only requires `botasaurus-driver` (`pip install botasaurus-driver`).
+- **Anti-detection is automatic** — `Driver()` handles fingerprint evasion, human-like timing, and stealth features out of the box. No extra configuration needed.
 
 #### Credential Parameterization — MANDATORY
 
-**When composing Playwright scripts from session history:** Any credentials, tokens, passwords, API keys, or other sensitive values you observed or typed during the interactive session MUST be extracted into configurable variables at the top of the generated script (e.g., `USERNAME`, `PASSWORD`, `API_KEY`). Never hardcode values you saw during reconnaissance into the script body. The session history contains these values in plaintext because it's a faithful record of what happened — your job is to parameterize them in the output script so it can be committed, shared, and configured per-environment.
+**When composing scripts from session history:** Any credentials, tokens, passwords, API keys, or other sensitive values you observed or typed during the interactive session MUST be extracted into configurable variables at the top of the generated script (e.g., `USERNAME`, `PASSWORD`, `API_KEY`). Never hardcode values you saw during reconnaissance into the script body. The session history contains these values in plaintext because it's a faithful record of what happened — your job is to parameterize them in the output script so it can be committed, shared, and configured per-environment.
 
 #### Secure Credential Injection — `fill_secret`
 
@@ -89,3 +91,35 @@ The `.env` file is found automatically in the server's working directory. For cu
 #### MCP Configuration
 
 If using this as a plugin, the MCP server registers automatically via `.mcp.json`. No manual configuration needed.
+
+#### Plugin Development — Cache Staleness
+
+Claude Code's plugin system snapshots plugin files into a versioned cache at install time:
+
+```text
+~/.claude/plugins/cache/{marketplace}/{plugin}/{version}/
+```
+
+The `.mcp.json` uses `${CLAUDE_PLUGIN_ROOT}` which resolves to this **cache directory**, not your source. This means new tools, source changes, and added modules are invisible until the cache is updated.
+
+**For active development**, hardcode the dev path in the **cache's** `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "browser-scout": {
+      "command": "uv",
+      "args": ["run", "--directory", "D:/Projects/browser-scout", "browser-scout"]
+    }
+  }
+}
+```
+
+This makes `uv run` always execute from the live source directory. Changes are picked up immediately — no cache sync needed.
+
+**Key details:**
+
+- The file to edit is `~/.claude/plugins/cache/browser-scout-marketplace/browser-scout/0.1.0/.mcp.json`
+- `installed_plugins.json` `installPath` does NOT control MCP server path resolution — the cache path is computed algorithmically from marketplace/plugin/version
+- Re-installing the plugin will overwrite this edit (restoring `${CLAUDE_PLUGIN_ROOT}`), so re-apply after any `/plugin update`
+- Skills, commands, agents, and hooks are loaded from `installPath`, but MCP servers use the cache's `.mcp.json` independently

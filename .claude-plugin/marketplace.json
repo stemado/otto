@@ -8,7 +8,7 @@
       "name": "browser-scout",
       "source": "./",
       "description": "Stealth browser reconnaissance for automating websites with anti-detection",
-      "keywords": ["browser", "automation", "reconnaissance", "playwright", "stealth"]
+      "keywords": ["browser", "automation", "reconnaissance", "anti-detection", "stealth", "botasaurus"]
     }
   ]
 }
