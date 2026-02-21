@@ -22,6 +22,7 @@ Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. 
 | **Page discovery** | Compact scout reports (~200 tokens) | You provide selectors | You provide selectors | You provide selectors |
 | **Credential safety** | Never appears in conversation | Plaintext in context | Plaintext in context | Plaintext in context |
 | **XHR interception** | Built-in network monitor with filtering | No | No | Limited |
+| **Video recording** | CDP screencast to MP4 | No | No | Built-in |
 | **Export to script** | One command, runs unattended | No | No | No |
 | **Best for** | Hostile enterprise portals | Testing your own app | Interactive debugging | Cross-browser test suites |
 
@@ -46,7 +47,7 @@ Otto handles all of this so you don't have to. Claude scouts the page, discovers
 - [uv](https://docs.astral.sh/uv/) -- used by the MCP server to manage dependencies
 - Google Chrome or Chromium -- Botasaurus drives it via CDP
 
-Dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are installed automatically by `uv` on first run.
+Dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are installed automatically by `uv` on first run. For video recording, install the optional extra: `pip install otto[video]` (or have `ffmpeg` on your PATH).
 
 ## Usage
 
@@ -77,6 +78,21 @@ Credentials are automatically parameterized -- real values never appear in the o
 /export-workflow portal-report-download
 ```
 
+### Video Recording
+
+Record your browser session as an MP4 video. Uses Chrome's CDP screencast to capture frames, then encodes with ffmpeg on stop.
+
+```
+record_video start    # begin recording (1280x720 @ 10fps)
+# ... interact with the page ...
+record_video stop     # stop, encode, return file path
+record_video status   # check frame count and elapsed time
+```
+
+Parameters: `max_width`, `max_height`, `quality` (1-100), `target_fps` (1-30). A 5-minute safety timer auto-stops runaway recordings.
+
+**Encoding** requires ffmpeg. Install via the optional extra (`pip install otto[video]` for a bundled ffmpeg binary) or have `ffmpeg` on your system PATH. Without ffmpeg, frames are saved as numbered JPEGs and the directory path is returned.
+
 ### `workflow-run`
 
 Replay an exported workflow without Claude in the loop. Intended for schedules, CI pipelines, and cron jobs.
@@ -97,7 +113,7 @@ Each step emits a JSON log line to stdout. Exit codes: `0` success, `1` step fai
 
 ## MCP Tools
 
-Otto exposes 11 tools via MCP, organized by function:
+Otto exposes 12 tools via MCP, organized by function:
 
 **Session lifecycle** -- `launch_session` . `close_session` . `get_session_history`
 
@@ -105,7 +121,7 @@ Otto exposes 11 tools via MCP, organized by function:
 
 **Interaction** -- `execute_action_tool` . `fill_secret` . `execute_javascript`
 
-**Observation** -- `monitor_network`
+**Observation** -- `monitor_network` . `record_video`
 
 | Tool | Purpose |
 |------|---------|
@@ -118,6 +134,7 @@ Otto exposes 11 tools via MCP, organized by function:
 | `take_screenshot` | Capture a screenshot for Claude to inspect visually |
 | `inspect_element` | Deep-inspect a DOM element: visibility, overlays, shadow DOM, ARIA |
 | `monitor_network` | Capture network traffic, filter by URL pattern, wait for downloads |
+| `record_video` | Record the browser screen to MP4 via CDP screencast |
 | `get_session_history` | Retrieve the full structured action history of the session |
 | `close_session` | Close the browser and release resources |
 
