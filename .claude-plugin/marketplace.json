@@ -1,11 +1,12 @@
 {
   "name": "otto-marketplace",
   "owner": {
-    "name": "sdoherty"
+    "name": "stemado"
   },
   "plugins": [
     {
       "name": "otto",
+      "version": "0.2.0",
       "source": "./",
       "description": "Stealth browser automation for websites with anti-detection",
       "keywords": ["browser", "automation", "anti-detection", "stealth", "botasaurus"]
