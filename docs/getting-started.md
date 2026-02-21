@@ -32,9 +32,15 @@ This registers the marketplace (a pointer to the GitHub repo — not a centraliz
 /plugin install otto@otto-marketplace
 ```
 
-That's it. Claude Code snapshots the plugin into its cache, registers the MCP server, and makes the skills and commands available.
+That's it. Claude Code snapshots the plugin into its cache, registers the MCP server, and makes the skills and commands available. Restart Claude Code after installing.
 
-Under the hood, the plugin gets cached to `~/.claude/plugins/cache/otto-marketplace/otto/0.1.0/`. The MCP server config inside that cache tells Claude Code how to launch the Python server via `uv run`.
+To update to the latest version later:
+
+```
+/plugin update otto@otto-marketplace
+```
+
+Then restart Claude Code again to pick up the changes.
 
 ## Your First Session
 

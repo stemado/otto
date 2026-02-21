@@ -36,18 +36,49 @@ Otto handles all of this so you don't have to. Claude scouts the page, discovers
 
 ## Install
 
+### Prerequisites
+
+Before installing Otto, make sure you have:
+
+1. **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** -- Otto is a Claude Code plugin
+2. **Python 3.11+** -- check with `python --version`
+3. **[uv](https://docs.astral.sh/uv/)** -- Python package manager used by the MCP server (`pip install uv` or see [install docs](https://docs.astral.sh/uv/getting-started/installation/))
+4. **Google Chrome or Chromium** -- Botasaurus drives it via Chrome DevTools Protocol
+
+### Step 1: Add the marketplace
+
+In Claude Code, run:
+
 ```
 /plugin marketplace add stemado/otto-marketplace
+```
+
+This registers the Otto plugin catalog. You only need to do this once.
+
+### Step 2: Install the plugin
+
+```
 /plugin install otto@otto-marketplace
 ```
 
-### Requirements
+### Step 3: Restart Claude Code
 
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) -- used by the MCP server to manage dependencies
-- Google Chrome or Chromium -- Botasaurus drives it via CDP
+Restart your Claude Code session to load the MCP server. You should see Otto's tools available (try asking Claude to "scout a website").
 
-Dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are installed automatically by `uv` on first run. For video recording, install the optional extra: `pip install otto[video]` (or have `ffmpeg` on your PATH).
+### Updating
+
+```
+/plugin update otto@otto-marketplace
+```
+
+Then restart Claude Code to pick up the new version.
+
+### What gets installed
+
+- **11 MCP tools** for browser automation (scout, click, type, monitor network, etc.)
+- **2 slash commands** -- `/scout <url>` and `/export-workflow [name]`
+- **1 skill** -- Otto responds to phrases like "automate this site", "scout this page", "build a bot"
+- Python dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are installed automatically by `uv` on first run
 
 ## Usage
 
