@@ -1,5 +1,5 @@
 """
-Paycom bC Census Export — Botasaurus-Driver Automation Script
+Acme bC Census Export — Botasaurus-Driver Automation Script
 =============================================================
 Generated from Otto session 533fd2b4ddf0.
 Uses botasaurus-driver for anti-detection and stealth browsing.
@@ -7,12 +7,12 @@ Uses botasaurus-driver for anti-detection and stealth browsing.
 Workflow: Login → 2FA (SMS via Twilio) → Generate Report → Download CSV → Logout
 
 Usage:
-    python paycom_census_export.py
+    python acme_census_export.py
 
 Environment variables (or .env file):
-    PAYCOM_CLIENT_CODE  - Paycom client code
-    PAYCOM_USERNAME     - Paycom username
-    PAYCOM_PASSWORD     - Paycom password
+    APP_CLIENT_CODE  - Acme client code
+    APP_USERNAME     - Acme username
+    APP_PASSWORD     - Acme password
     TWILIO_ACCOUNT_SID  - Twilio account SID
     TWILIO_AUTH_TOKEN   - Twilio auth token
     TWILIO_PHONE_NUMBER - Phone number receiving 2FA SMS (digits only)
@@ -33,16 +33,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-CLIENT_CODE = os.environ["PAYCOM_CLIENT_CODE"]
-USERNAME = os.environ["PAYCOM_USERNAME"]
-PASSWORD = os.environ["PAYCOM_PASSWORD"]
+CLIENT_CODE = os.environ["APP_CLIENT_CODE"]
+USERNAME = os.environ["APP_USERNAME"]
+PASSWORD = os.environ["APP_PASSWORD"]
 
 TWILIO_SID = os.environ["TWILIO_ACCOUNT_SID"]
 TWILIO_TOKEN = os.environ["TWILIO_AUTH_TOKEN"]
 TWILIO_PHONE = os.environ["TWILIO_PHONE_NUMBER"]
 
 # Report configuration
-REPORT_URL = "https://www.paycomonline.net/v4/cl/enh-srw-reportwriter.php?rpt_id=746&sec_id=1"
+REPORT_URL = "https://www.example.com/v4/cl/enh-srw-reportwriter.php?rpt_id=746&sec_id=1"
 DOWNLOAD_DEST = Path(
     r"\\anf-fs01\EDI\sFTP\Clients\CenturyCareManagement\CensusAutomation\Archive"
 )
@@ -117,16 +117,16 @@ def wait_for_download(directory: Path, timeout: float = 60) -> Path:
 
 
 def fetch_2fa_code_from_twilio() -> str:
-    """Poll Twilio Messages API for the most recent Paycom 2FA code.
+    """Poll Twilio Messages API for the most recent Acme 2FA code.
 
-    Paycom sends SMS in the format: "XXXXXX is your Paycom authentication code"
+    Acme sends SMS in the format: "XXXXXX is your Acme authentication code"
     We poll until a message matching that pattern arrives or we timeout.
     """
     url = (
         f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_SID}"
         f"/Messages.json?To=%2B1{TWILIO_PHONE}&PageSize=1"
     )
-    pattern = re.compile(r"(\d{6}) is your Paycom authentication code")
+    pattern = re.compile(r"(\d{6}) is your Acme authentication code")
     deadline = time.time() + TWILIO_POLL_TIMEOUT_S
 
     # Record the timestamp of the newest message before we start,
@@ -154,7 +154,7 @@ def fetch_2fa_code_from_twilio() -> str:
             return match.group(1)
 
     raise TimeoutError(
-        f"No Paycom 2FA code received via Twilio within {TWILIO_POLL_TIMEOUT_S}s"
+        f"No Acme 2FA code received via Twilio within {TWILIO_POLL_TIMEOUT_S}s"
     )
 
 
@@ -170,7 +170,7 @@ def run():
 
     try:
         # ── Step 1: Navigate to login page ───────────────────────────────
-        driver.get("https://www.paycomonline.net/v4/cl/cl-login.php")
+        driver.get("https://www.example.com/v4/cl/cl-login.php")
         human_pause_long()
 
         # ── Step 2: Fill credentials ─────────────────────────────────────
@@ -205,7 +205,7 @@ def run():
         human_pause_long()
 
         # ── Step 6: Fetch 2FA code from Twilio ───────────────────────────
-        # Paycom sends a 6-digit code via SMS. We use the Twilio Messages
+        # Acme sends a 6-digit code via SMS. We use the Twilio Messages
         # API to retrieve it. Polling starts after a baseline check to
         # avoid reading stale codes from previous sessions.
         driver.wait_for_element("#pin", wait=30)

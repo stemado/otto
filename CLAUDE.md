@@ -75,10 +75,10 @@ When you compose the final script from session history:
 
 When filling credential fields (passwords, API keys, tokens), use the `fill_secret` tool instead of `execute_action_tool`. This keeps the credential value out of the conversation:
 
-- `fill_secret(session_id, env_var="PAYCOM_PASSWORD", selector="input#txtPassword")`
+- `fill_secret(session_id, env_var="APP_PASSWORD", selector="input#txtPassword")`
 - The server reads the value from `.env` and types it into the field
 - The response only confirms how many characters were typed (no value exposure)
-- Session history records `${PAYCOM_PASSWORD}` instead of the actual password
+- Session history records `${APP_PASSWORD}` instead of the actual password
 
 The `.env` file is found automatically in the server's working directory. For custom locations, set `OTTO_ENV_FILE` in `.mcp.json` env config.
 

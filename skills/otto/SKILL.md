@@ -93,7 +93,7 @@ Any credentials, tokens, passwords, or API keys observed during the session MUST
 
 ### Credentials from `fill_secret`
 
-When `fill_secret` was used during the session, the history already contains parameterized values like `${PAYCOM_PASSWORD}`. Use these variable names directly in the generated script's configuration section. Do not attempt to resolve or look up the actual values.
+When `fill_secret` was used during the session, the history already contains parameterized values like `${APP_PASSWORD}`. Use these variable names directly in the generated script's configuration section. Do not attempt to resolve or look up the actual values.
 
 ## Limitations
 

@@ -29,7 +29,7 @@ async def fill_secret(
 
     Args:
         session_id: Active session ID.
-        env_var: Name of the environment variable in .env (e.g., 'PAYCOM_PASSWORD').
+        env_var: Name of the environment variable in .env (e.g., 'APP_PASSWORD').
         selector: CSS selector of the target input field.
         frame_context: Iframe selector path. Use 'main' or omit for top-level.
         clear_first: Clear the field before typing. Default: true.
@@ -40,9 +40,9 @@ async def fill_secret(
 ### Usage Flow
 
 1. Claude scouts the page, discovers a password field via `find_elements`
-2. Claude calls `fill_secret(session_id="abc", env_var="PAYCOM_PASSWORD", selector="input#txtPassword")`
-3. Server reads `PAYCOM_PASSWORD` from `.env`, types it into the field
-4. Claude receives: `{"success": true, "env_var": "PAYCOM_PASSWORD", "selector": "input#txtPassword", "chars_typed": 22}`
+2. Claude calls `fill_secret(session_id="abc", env_var="APP_PASSWORD", selector="input#txtPassword")`
+3. Server reads `APP_PASSWORD` from `.env`, types it into the field
+4. Claude receives: `{"success": true, "env_var": "APP_PASSWORD", "selector": "input#txtPassword", "chars_typed": 22}`
 5. The actual password value never enters the conversation
 
 ## .env Loading
@@ -79,7 +79,7 @@ For non-default locations, configure in `.mcp.json`:
 ```python
 class FillSecretResult(BaseModel):
     success: bool
-    env_var: str              # "PAYCOM_PASSWORD"
+    env_var: str              # "APP_PASSWORD"
     selector: str             # "input#txtPassword"
     chars_typed: int          # 22
     url_changed: bool = False
@@ -104,7 +104,7 @@ Records a standard `ActionRecord` with the env var reference instead of the actu
 ActionRecord(
     action="type",
     selector="input#txtPassword",
-    value="${PAYCOM_PASSWORD}",    # reference, not the real value
+    value="${APP_PASSWORD}",    # reference, not the real value
     frame_context=frame_context,
     success=True,
     url_before=url_before,

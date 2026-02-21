@@ -66,13 +66,13 @@ from browser_scout.models import FillSecretResult
 def test_fill_secret_result_success():
     result = FillSecretResult(
         success=True,
-        env_var="PAYCOM_PASSWORD",
+        env_var="APP_PASSWORD",
         selector="input#txtPassword",
         chars_typed=22,
-        current_url="https://paycom.com/login",
+        current_url="https://example.com/login",
     )
     assert result.success is True
-    assert result.env_var == "PAYCOM_PASSWORD"
+    assert result.env_var == "APP_PASSWORD"
     assert result.chars_typed == 22
     assert result.url_changed is False  # default
     assert result.error is None  # default
@@ -94,7 +94,7 @@ def test_fill_secret_result_error():
 def test_fill_secret_result_serialization():
     result = FillSecretResult(
         success=True,
-        env_var="PAYCOM_PASSWORD",
+        env_var="APP_PASSWORD",
         selector="input#txtPassword",
         chars_typed=22,
     )
@@ -325,27 +325,27 @@ Add to the end of `tests/test_workflow.py`:
 def test_converter_preserves_pre_parameterized_value():
     """fill_secret records ${VAR} in history — converter should pass it through."""
     history = _make_history([
-        ActionRecord(action="type", selector="input#txtPassword", value="${PAYCOM_PASSWORD}", success=True, timestamp="T1"),
+        ActionRecord(action="type", selector="input#txtPassword", value="${APP_PASSWORD}", success=True, timestamp="T1"),
     ])
     workflow = WorkflowConverter.from_history(history, name="test")
     # Value should pass through unchanged
-    assert workflow.steps[0].value == "${PAYCOM_PASSWORD}"
+    assert workflow.steps[0].value == "${APP_PASSWORD}"
     # Should create a credential variable for it
-    assert "PAYCOM_PASSWORD" in workflow.variables
-    assert workflow.variables["PAYCOM_PASSWORD"].type == "credential"
+    assert "APP_PASSWORD" in workflow.variables
+    assert workflow.variables["APP_PASSWORD"].type == "credential"
 
 
 def test_converter_preserves_multiple_pre_parameterized():
     """Multiple pre-parameterized vars from fill_secret."""
     history = _make_history([
-        ActionRecord(action="type", selector="#client_code", value="${PAYCOM_CLIENT_CODE}", success=True, timestamp="T1"),
-        ActionRecord(action="type", selector="#username", value="${PAYCOM_USERNAME}", success=True, timestamp="T2"),
-        ActionRecord(action="type", selector="#password", value="${PAYCOM_PASSWORD}", success=True, timestamp="T3"),
+        ActionRecord(action="type", selector="#client_code", value="${APP_CLIENT_CODE}", success=True, timestamp="T1"),
+        ActionRecord(action="type", selector="#username", value="${APP_USERNAME}", success=True, timestamp="T2"),
+        ActionRecord(action="type", selector="#password", value="${APP_PASSWORD}", success=True, timestamp="T3"),
     ])
     workflow = WorkflowConverter.from_history(history, name="test")
-    assert workflow.steps[0].value == "${PAYCOM_CLIENT_CODE}"
-    assert workflow.steps[1].value == "${PAYCOM_USERNAME}"
-    assert workflow.steps[2].value == "${PAYCOM_PASSWORD}"
+    assert workflow.steps[0].value == "${APP_CLIENT_CODE}"
+    assert workflow.steps[1].value == "${APP_USERNAME}"
+    assert workflow.steps[2].value == "${APP_PASSWORD}"
     assert len(workflow.variables) == 3
     for var in workflow.variables.values():
         assert var.type == "credential"
@@ -354,13 +354,13 @@ def test_converter_preserves_multiple_pre_parameterized():
 def test_converter_mixed_pre_parameterized_and_auto_detected():
     """Pre-parameterized fill_secret values coexist with auto-detected ones."""
     history = _make_history([
-        ActionRecord(action="type", selector="#username", value="${PAYCOM_USERNAME}", success=True, timestamp="T1"),
+        ActionRecord(action="type", selector="#username", value="${APP_USERNAME}", success=True, timestamp="T1"),
         ActionRecord(action="type", selector="#other_password_field", value="raw_secret", success=True, timestamp="T2"),
     ])
     workflow = WorkflowConverter.from_history(history, name="test")
     # Pre-parameterized: passed through
-    assert workflow.steps[0].value == "${PAYCOM_USERNAME}"
-    assert "PAYCOM_USERNAME" in workflow.variables
+    assert workflow.steps[0].value == "${APP_USERNAME}"
+    assert "APP_USERNAME" in workflow.variables
     # Auto-detected: the second field has "password" in its selector
     assert workflow.steps[1].value == "${PASSWORD}"
     assert "PASSWORD" in workflow.variables
@@ -369,7 +369,7 @@ def test_converter_mixed_pre_parameterized_and_auto_detected():
 **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest tests/test_workflow.py -v -k "pre_parameterized"`
-Expected: FAIL — first test shows `value == "${PASSWORD}"` instead of `"${PAYCOM_PASSWORD}"` because the converter's regex matches the selector `input#txtPassword` and overwrites the pre-parameterized value.
+Expected: FAIL — first test shows `value == "${PASSWORD}"` instead of `"${APP_PASSWORD}"` because the converter's regex matches the selector `input#txtPassword` and overwrites the pre-parameterized value.
 
 **Step 3: Update the WorkflowConverter**
 
@@ -561,7 +561,7 @@ async def fill_secret(
 
     Args:
         session_id: Active session ID.
-        env_var: Name of the environment variable in .env (e.g., 'PAYCOM_PASSWORD').
+        env_var: Name of the environment variable in .env (e.g., 'APP_PASSWORD').
         selector: CSS selector of the target input field.
         frame_context: Iframe selector path for the target element. Use 'main' or omit for top-level.
         clear_first: Clear the field before typing. Default: true.
@@ -691,10 +691,10 @@ Add a new section after `#### Credential Parameterization — MANDATORY`:
 
 When filling credential fields (passwords, API keys, tokens), use the `fill_secret` tool instead of `execute_action_tool`. This keeps the credential value out of the conversation:
 
-- `fill_secret(session_id, env_var="PAYCOM_PASSWORD", selector="input#txtPassword")`
+- `fill_secret(session_id, env_var="APP_PASSWORD", selector="input#txtPassword")`
 - The server reads the value from `.env` and types it into the field
 - The response only confirms how many characters were typed (no value exposure)
-- Session history records `${PAYCOM_PASSWORD}` instead of the actual password
+- Session history records `${APP_PASSWORD}` instead of the actual password
 
 The `.env` file is found automatically in the server's working directory. For custom locations, set `BROWSER_SCOUT_ENV_FILE` in `.mcp.json` env config.
 ```
@@ -712,7 +712,7 @@ Add to the `## Composing Playwright Scripts` section:
 ```markdown
 ### Credentials from `fill_secret`
 
-When `fill_secret` was used during the session, the history already contains parameterized values like `${PAYCOM_PASSWORD}`. Use these variable names directly in the generated Playwright script's configuration section. Do not attempt to resolve or look up the actual values.
+When `fill_secret` was used during the session, the history already contains parameterized values like `${APP_PASSWORD}`. Use these variable names directly in the generated Playwright script's configuration section. Do not attempt to resolve or look up the actual values.
 ```
 
 **Step 3: Commit**

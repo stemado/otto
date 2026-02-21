@@ -339,13 +339,13 @@ def test_fill_secret_result_success():
 
     result = FillSecretResult(
         success=True,
-        env_var="PAYCOM_PASSWORD",
+        env_var="APP_PASSWORD",
         selector="input#txtPassword",
         chars_typed=22,
-        current_url="https://paycom.com/login",
+        current_url="https://example.com/login",
     )
     assert result.success is True
-    assert result.env_var == "PAYCOM_PASSWORD"
+    assert result.env_var == "APP_PASSWORD"
     assert result.chars_typed == 22
     assert result.url_changed is False
     assert result.error is None
@@ -371,7 +371,7 @@ def test_fill_secret_result_serialization():
 
     result = FillSecretResult(
         success=True,
-        env_var="PAYCOM_PASSWORD",
+        env_var="APP_PASSWORD",
         selector="input#txtPassword",
         chars_typed=22,
     )

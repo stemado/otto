@@ -84,20 +84,20 @@ The `.env` search order is: explicit path > `OTTO_ENV_FILE` env var > `.env` in 
 Once you've walked through a complete workflow (login, navigate, click export, etc.), run:
 
 ```
-/export-workflow paycom-export
+/export-workflow acme-export
 ```
 
 This generates two files in `workflows/`:
 
-1. **`paycom-export.py`** — A standalone Python script using `botasaurus-driver` with numbered, commented steps. Credentials are parameterized as variables at the top.
-2. **`paycom-export.json`** — A portable JSON workflow definition.
+1. **`acme-export.py`** — A standalone Python script using `botasaurus-driver` with numbered, commented steps. Credentials are parameterized as variables at the top.
+2. **`acme-export.json`** — A portable JSON workflow definition.
 
 ## Replaying Workflows Without Claude
 
 The JSON workflow can be replayed from the command line without Claude in the loop:
 
 ```
-workflow-run workflows/paycom-export.json \
+workflow-run workflows/acme-export.json \
   --var USERNAME=admin --var PASSWORD=secret
 ```
 

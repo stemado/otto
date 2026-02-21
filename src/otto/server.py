@@ -343,7 +343,7 @@ async def fill_secret(
 
     Args:
         session_id: Active session ID.
-        env_var: Name of the environment variable in .env (e.g., 'PAYCOM_PASSWORD').
+        env_var: Name of the environment variable in .env (e.g., 'APP_PASSWORD').
         selector: CSS selector of the target input field.
         frame_context: Iframe selector path for the target element. Use 'main' or omit for top-level.
         clear_first: Clear the field before typing. Default: true.
