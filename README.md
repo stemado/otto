@@ -9,15 +9,27 @@
 
 ---
 
-Most browser plugins let Claude interact with pages you already understand. Otto is built for the opposite scenario: enterprise portals, vendor dashboards, and third-party sites where you don't control the HTML, the page actively resists automation, and you need a script that runs unattended — without Claude in the loop.
+Most browser plugins let Claude interact with pages you already understand. Otto is built for the opposite scenario: enterprise portals, vendor dashboards, and third-party sites where you don't control the HTML, the page actively resists automation, and you need a script that runs unattended -- without Claude in the loop.
 
-Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. You describe a task conversationally — *"log into ADP, navigate to Census, export the CSV"* — and Claude scouts the page structure, drives a stealth browser through the workflow, and exports a standalone Python script you can run on a schedule. Built on [Botasaurus](https://github.com/omkarcloud/botasaurus) for fingerprint evasion, so the sites that block Playwright and Puppeteer don't block Otto.
+Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. You describe a task conversationally -- *"log into the portal, navigate to Reports, export the CSV"* -- and Claude scouts the page structure, drives a stealth browser through the workflow, and exports a standalone Python script you can run on a schedule. Built on [Botasaurus](https://github.com/omkarcloud/botasaurus) for fingerprint evasion, so the sites that block Playwright and Puppeteer don't block Otto.
+
+## Why Otto?
+
+|   | Otto | Dev-Browser | Chrome Extension MCP | Playwright MCP |
+| --- | --- | --- | --- | --- |
+| **Anti-detection** | Botasaurus stealth fingerprinting | Playwright (detectable) | Browser extension (detectable) | Playwright (detectable) |
+| **Bot check score** | Passes sannysoft, creepjs | Fails common checks | N/A | Fails common checks |
+| **Page discovery** | Compact scout reports (~200 tokens) | You provide selectors | You provide selectors | You provide selectors |
+| **Credential safety** | Never appears in conversation | Plaintext in context | Plaintext in context | Plaintext in context |
+| **XHR interception** | Built-in network monitor with filtering | No | No | Limited |
+| **Export to script** | One command, runs unattended | No | No | No |
+| **Best for** | Hostile enterprise portals | Testing your own app | Interactive debugging | Cross-browser test suites |
 
 ## The Problem
 
 Enterprise portals are hostile terrain for automation. The login form lives inside a triple-nested iframe. The export button triggers an XHR that returns a signed URL. The page fingerprints your browser and blocks anything that smells like Playwright.
 
-Otto handles all of this so you don't have to. Claude scouts the page, discovers selectors from reconnaissance rather than guesswork, drives the workflow step by step, and exports a production-grade script — no web development knowledge required.
+Otto handles all of this so you don't have to. Claude scouts the page, discovers selectors from reconnaissance rather than guesswork, drives the workflow step by step, and exports a production-grade script -- no web development knowledge required.
 
 > **New here?** The [Getting Started guide](docs/getting-started.md) walks through a complete example from scout to scheduled script.
 
@@ -31,8 +43,8 @@ Otto handles all of this so you don't have to. Claude scouts the page, discovers
 ### Requirements
 
 - Python 3.11+
-- [uv](https://docs.astral.sh/uv/) — used by the MCP server to manage dependencies
-- Google Chrome or Chromium — Botasaurus drives it via CDP
+- [uv](https://docs.astral.sh/uv/) -- used by the MCP server to manage dependencies
+- Google Chrome or Chromium -- Botasaurus drives it via CDP
 
 Dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are installed automatically by `uv` on first run.
 
@@ -40,16 +52,16 @@ Dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are insta
 
 Describe what you want automated:
 
-> "Scout the ADP login page, log in with the credentials in .env, navigate to Census > Export, and download the CSV."
+> "Scout the login page, log in with the credentials in .env, navigate to Reports > Export, and download the CSV."
 
-Claude launches a stealth browser, scouts the page, drives through the workflow, and exports a standalone script when done. You watch it work and redirect as needed — the same way you'd pair-program with a colleague who happens to have a browser open.
+Claude launches a stealth browser, scouts the page, drives through the workflow, and exports a standalone script when done. You watch it work and redirect as needed -- the same way you'd pair-program with a colleague who happens to have a browser open.
 
 ### `/scout <url>`
 
 Launch a stealth browser and get a structural overview of any page: iframe hierarchy, shadow DOM boundaries, interactive element counts. The session stays alive for follow-up interactions.
 
 ```
-/scout https://online.adp.com/signin/v1/
+/scout https://example.com/portal/login
 ```
 
 ### `/export-workflow [name]`
@@ -59,10 +71,10 @@ After completing a workflow interactively, export it as a replayable script. Pro
 - A standalone Python script with numbered, commented steps
 - A portable JSON workflow definition (replayable via `workflow-run`)
 
-Credentials are automatically parameterized — real values never appear in the output.
+Credentials are automatically parameterized -- real values never appear in the output.
 
 ```
-/export-workflow adp-report-download
+/export-workflow portal-report-download
 ```
 
 ### `workflow-run`
@@ -70,7 +82,7 @@ Credentials are automatically parameterized — real values never appear in the 
 Replay an exported workflow without Claude in the loop. Intended for schedules, CI pipelines, and cron jobs.
 
 ```
-workflow-run workflows/adp-report-download.json \
+workflow-run workflows/portal-report-download.json \
   --var USERNAME=admin --var PASSWORD=s3cret
 ```
 
@@ -87,13 +99,13 @@ Each step emits a JSON log line to stdout. Exit codes: `0` success, `1` step fai
 
 Otto exposes 11 tools via MCP, organized by function:
 
-**Session lifecycle** — `launch_session` · `close_session` · `get_session_history`
+**Session lifecycle** -- `launch_session` . `close_session` . `get_session_history`
 
-**Reconnaissance** — `scout_page_tool` · `find_elements` · `inspect_element` · `take_screenshot`
+**Reconnaissance** -- `scout_page_tool` . `find_elements` . `inspect_element` . `take_screenshot`
 
-**Interaction** — `execute_action_tool` · `fill_secret` · `execute_javascript`
+**Interaction** -- `execute_action_tool` . `fill_secret` . `execute_javascript`
 
-**Observation** — `monitor_network`
+**Observation** -- `monitor_network`
 
 | Tool | Purpose |
 |------|---------|
@@ -113,15 +125,13 @@ Otto exposes 11 tools via MCP, organized by function:
 
 Several tools give Claude browser access. They solve different problems.
 
-**Otto** is for automating sites you don't control — enterprise portals, HR systems, vendor dashboards — where the HTML is hostile, anti-bot detection is present, and you want a script that runs unattended. Otto discovers page structure for you, handles stealth, and exports standalone workflows.
+**Otto** is for automating sites you don't control -- enterprise portals, HR systems, vendor dashboards -- where the HTML is hostile, anti-bot detection is present, and you want a script that runs unattended. Otto discovers page structure for you, handles stealth, and exports standalone workflows.
 
-**[Dev-Browser](https://github.com/SawyerHood/dev-browser)** is for testing your own application during development. You provide the selectors; it drives Playwright against known HTML.
+**[Dev-Browser](https://github.com/anthropics/claude-code-plugins)** is for testing your own application during development. You provide the selectors; it drives Playwright against known HTML.
 
-**[Claude in Chrome](https://code.claude.com/docs/en/chrome)** is for interactive debugging and inspection. It operates inside your real browser session — useful when you're already looking at the page and want Claude to help you understand or manipulate it.
+**[Chrome Extension MCP](https://docs.anthropic.com/en/docs/claude-code/mcp)** is for interactive debugging and inspection. It operates inside your real browser session -- useful when you're already looking at the page and want Claude to help you understand or manipulate it.
 
 **[Playwright MCP](https://browsermcp.io/)** is for cross-browser test automation. You provide selectors and assertions; it runs deterministic test suites across engines.
-
-The distinguishing characteristics of Otto are anti-detection stealth (via Botasaurus), automatic page structure discovery, and the ability to export workflows that run independently of Claude.
 
 ## License
 
