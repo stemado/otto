@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# uv
+.python-version
+
+# Downloads captured during browser sessions
+downloads/
+
+# Environment variables
+.env
+
+# Exported workflow files (may contain credentials)
+workflows/
+
+# Claude Code local settings
+.claude/
+
+# Error screenshots from workflow executor
+screenshots/
+
+# Internal task tracking
+tasks/
+
+# Internal development artifacts
+docs/plans/
+docs/specs/
+verification/

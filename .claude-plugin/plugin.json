@@ -1,0 +1,11 @@
+{
+  "name": "otto",
+  "version": "0.1.0",
+  "description": "Stealth browser automation for websites with anti-detection. Scout page structure, execute actions, monitor network, then compose botasaurus-driver scripts.",
+  "license": "MIT",
+  "repository": "https://github.com/stemado/otto",
+  "author": {
+    "name": "sdoherty"
+  },
+  "keywords": ["browser", "automation", "anti-detection", "stealth", "botasaurus"]
+}
