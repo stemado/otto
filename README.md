@@ -24,11 +24,11 @@ Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. 
 | **XHR interception** | Built-in network monitor with filtering | No | No | Limited |
 | **Video recording** | CDP screencast to MP4 | No | No | Built-in |
 | **Export to script** | One command, runs unattended | No | No | No |
-| **Best for** | Hostile enterprise portals | Testing your own app | Interactive debugging | Cross-browser test suites |
+| **Best for** | Complex enterprise portals | Testing your own app | Interactive debugging | Cross-browser test suites |
 
 ## The Problem
 
-Enterprise portals are hostile terrain for automation. The login form lives inside a triple-nested iframe. The export button triggers an XHR that returns a signed URL. The page fingerprints your browser and blocks anything that smells like Playwright.
+Enterprise portals are tough terrain for automation. The login form lives inside a triple-nested iframe. The export button triggers an XHR that returns a signed URL. The page fingerprints your browser and blocks anything that smells like Playwright.
 
 Otto handles all of this so you don't have to. Claude scouts the page, discovers selectors from reconnaissance rather than guesswork, drives the workflow step by step, and exports a production-grade script -- no web development knowledge required.
 
@@ -142,7 +142,7 @@ Otto exposes 12 tools via MCP, organized by function:
 
 Several tools give Claude browser access. They solve different problems.
 
-**Otto** is for automating sites you don't control -- enterprise portals, HR systems, vendor dashboards -- where the HTML is hostile, anti-bot detection is present, and you want a script that runs unattended. Otto discovers page structure for you, handles stealth, and exports standalone workflows.
+**Otto** is for automating sites you don't control -- enterprise portals, HR systems, vendor dashboards -- where the HTML is opaque, anti-bot detection is present, and you want a script that runs unattended. Otto discovers page structure for you, handles stealth, and exports standalone workflows.
 
 **[Dev-Browser](https://github.com/anthropics/claude-code-plugins)** is for testing your own application during development. You provide the selectors; it drives Playwright against known HTML.
 
