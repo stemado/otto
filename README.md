@@ -2,7 +2,7 @@
 
 Automate any website by describing what you want in plain English. No web development knowledge required.
 
-Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that gives Claude a real browser it can see and control. You describe the task — "log into Paycom, navigate to Census, export the CSV" — and Claude figures out the website for you: the nested iframes, the shadow DOM, the XHR calls, the authentication flow. Then it writes a production-grade automation script you can run on a schedule without Claude.
+Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that gives Claude a real browser it can see and control. You describe the task — "log into [EnterpriseApplication], navigate to Census, export the CSV" — and Claude figures out the website for you: the nested iframes, the shadow DOM, the XHR calls, the authentication flow. Then it writes a production-grade automation script you can run on a schedule without Claude.
 
 ## Why This Exists
 
@@ -35,7 +35,7 @@ Dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are insta
 
 Just describe what you want automated:
 
-> "Scout the Paycom login page, log in with the credentials in .env, navigate to Census > Export, and download the CSV"
+> "Scout the [YourEnterpriseApp] login page, log in with the credentials in .env, navigate to Census > Export, and download the CSV"
 
 Claude launches a stealth browser, scouts the page, drives through the workflow step by step, and exports a standalone script when done. You watch it work and redirect as needed — the same way you'd pair-program with a colleague who happens to have a browser open.
 
