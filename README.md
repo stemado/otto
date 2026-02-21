@@ -7,6 +7,10 @@
   No web development knowledge required.</em>
 </p>
 
+<p align="center">
+  <img src="assets/demo-hero.gif" alt="Otto in action: scout, fill, submit, capture" width="640">
+</p>
+
 ---
 
 Most browser plugins let Claude interact with pages you already understand. Otto is built for the opposite scenario: enterprise portals, vendor dashboards, and third-party sites where you don't control the HTML, the page actively resists automation, and you need a script that runs unattended -- without Claude in the loop.
@@ -25,6 +29,11 @@ Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. 
 | **Video recording** | CDP screencast to MP4 | No | No | Built-in |
 | **Export to script** | One command, runs unattended | No | No | No |
 | **Best for** | Complex enterprise portals | Testing your own app | Interactive debugging | Cross-browser test suites |
+
+<p align="center">
+  <img src="assets/demo-antidetection.gif" alt="Otto passes all bot detection tests on sannysoft.com" width="640">
+  <br><em>Otto passes every bot detection test on sannysoft.com — 51 tests, 0 failures.</em>
+</p>
 
 ## The Problem
 
@@ -95,6 +104,11 @@ Launch a stealth browser and get a structural overview of any page: iframe hiera
 ```
 /scout https://example.com/portal/login
 ```
+
+<p align="center">
+  <img src="assets/demo-scout.gif" alt="Scout report: compact page overview of Hacker News" width="640">
+  <br><em>Compact structural overview in ~200 tokens — not a raw DOM dump.</em>
+</p>
 
 ### `/export-workflow [name]`
 
@@ -168,6 +182,23 @@ Otto exposes 12 tools via MCP, organized by function:
 | `record_video` | Record the browser screen to MP4 via CDP screencast |
 | `get_session_history` | Retrieve the full structured action history of the session |
 | `close_session` | Close the browser and release resources |
+
+### Credential Handling
+
+`fill_secret` injects credentials from your `.env` file directly into form fields. The actual value never appears in the conversation -- Claude only sees a confirmation like `"chars_typed": 22`. Session history stores `${APP_PASSWORD}` references, not real values, so exported scripts are safe to commit.
+
+<p align="center">
+  <img src="assets/demo-fill-secret.gif" alt="Form fields filled without exposing credentials" width="640">
+</p>
+
+## Network Interception
+
+Otto's `monitor_network` tool captures XHR, Fetch, and other requests in real time with URL pattern filtering. This is how Otto handles sites that hide media behind blob URLs, trigger downloads via signed URLs, or make API calls that you need to replay in your automation script.
+
+<p align="center">
+  <img src="assets/demo-xhr-interception.gif" alt="HLS.js video playing with network capture of .ts segments" width="640">
+  <br><em>Video plays from a blob: URL — Otto catches the real .m3u8 and .ts segment URLs behind the scenes.</em>
+</p>
 
 ## When to Use What
 
