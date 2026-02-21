@@ -532,7 +532,7 @@ async def take_screenshot_tool(
     clip_height: float | None = None,
     full_page: bool = False,
     ctx: Context[ServerSession, AppContext] = None,
-) -> list | dict:
+) -> CallToolResult:
     """Capture a screenshot of the current page. Returns the image inline so Claude can see it.
 
     Use this for visual verification after clicks, to see page state, or to debug
@@ -569,7 +569,10 @@ async def take_screenshot_tool(
 
     if not result.success or raw_bytes is None:
         await ctx.warning(f"Screenshot failed: {result.error}")
-        return result.model_dump(exclude_none=True)
+        return CallToolResult(
+            content=[TextContent(type="text", text=json.dumps(result.model_dump(exclude_none=True)))],
+            isError=True,
+        )
 
     await ctx.info(f"Screenshot captured: {result.byte_size} bytes ({format})")
 
