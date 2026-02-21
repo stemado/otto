@@ -1,6 +1,11 @@
-# Otto
+<p align="center">
+  <img src="assets/logo.png" alt="Otto" width="400">
+</p>
 
-Automate any website by describing what you want in plain English. No web development knowledge required.
+<p align="center">
+  Automate any website by describing what you want in plain English.<br>
+  No web development knowledge required.
+</p>
 
 Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin that gives Claude a real browser it can see and control. You describe the task — "log into [EnterpriseApplication], navigate to Census, export the CSV" — and Claude figures out the website for you: the nested iframes, the shadow DOM, the XHR calls, the authentication flow. Then it writes a production-grade automation script you can run on a schedule without Claude.
 
