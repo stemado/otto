@@ -9,6 +9,7 @@ from .models import (
     FindElementsRecord,
     JavaScriptRecord,
     NetworkEvent,
+    RecordingRecord,
     ScoutReport,
     ScoutSummaryRecord,
     ScreenshotRecord,
@@ -22,6 +23,7 @@ MAX_NETWORK_EVENTS = 5_000
 MAX_SCOUTS = 1_000
 MAX_JS_CALLS = 5_000
 MAX_SCREENSHOTS = 500
+MAX_RECORDINGS = 100
 MAX_FIND_ELEMENTS = 5_000
 MAX_NAVIGATIONS = 5_000
 
@@ -37,6 +39,7 @@ class SessionHistoryTracker:
         self.find_elements_calls: list[FindElementsRecord] = []
         self.javascript_calls: list[JavaScriptRecord] = []
         self.screenshots: list[ScreenshotRecord] = []
+        self.recordings: list[RecordingRecord] = []
         self.network_events: list[NetworkEvent] = []
         self.navigations: list[dict] = []
 
@@ -94,6 +97,11 @@ class SessionHistoryTracker:
             self.screenshots.pop(0)
         self.screenshots.append(record)
 
+    def record_recording(self, record: RecordingRecord) -> None:
+        if len(self.recordings) >= MAX_RECORDINGS:
+            self.recordings.pop(0)
+        self.recordings.append(record)
+
     def get_full_history(self) -> SessionHistory:
         return SessionHistory(
             session_id=self.session_id,
@@ -103,6 +111,7 @@ class SessionHistoryTracker:
             find_elements_calls=self.find_elements_calls,
             javascript_calls=self.javascript_calls,
             screenshots=self.screenshots,
+            recordings=self.recordings,
             network_events=self.network_events,
             navigations=self.navigations,
         )

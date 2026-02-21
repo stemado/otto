@@ -208,6 +208,35 @@ class ElementInspection(BaseModel):
     error: str | None = Field(default=None)
 
 
+class RecordingResult(BaseModel):
+    """Result from video recording operations."""
+
+    recording_active: bool = Field(default=False)
+    video_path: str | None = Field(default=None, description="Path to encoded MP4 file")
+    frames_dir: str | None = Field(default=None, description="Path to raw frames if encoding unavailable")
+    frame_count: int = Field(default=0)
+    duration_seconds: float = Field(default=0.0)
+    encoded: bool = Field(default=False, description="Whether frames were encoded to video")
+    started_at: str | None = Field(default=None)
+    elapsed_seconds: float = Field(default=0.0)
+    target_fps: int = Field(default=10)
+    resolution: str = Field(default="1280x720")
+    error: str | None = Field(default=None)
+    encode_warning: str | None = Field(default=None)
+
+
+class RecordingRecord(BaseModel):
+    """Compact record of a recording for session history."""
+
+    started_at: str = ""
+    stopped_at: str = ""
+    duration_seconds: float = 0.0
+    frame_count: int = 0
+    video_path: str | None = None
+    encoded: bool = False
+    timestamp: str = ""
+
+
 class SessionHistory(BaseModel):
     """Complete structured history of a browser session."""
 
@@ -218,6 +247,7 @@ class SessionHistory(BaseModel):
     find_elements_calls: list[FindElementsRecord] = Field(default_factory=list)
     javascript_calls: list[JavaScriptRecord] = Field(default_factory=list)
     screenshots: list[ScreenshotRecord] = Field(default_factory=list)
+    recordings: list[RecordingRecord] = Field(default_factory=list)
     network_events: list[NetworkEvent] = Field(default_factory=list)
     navigations: list[dict] = Field(default_factory=list, description="List of {url, timestamp}")
 

@@ -11,6 +11,7 @@ from botasaurus_driver import Driver
 from .history import SessionHistoryTracker
 from .models import InteractiveElement, SessionCloseResult, SessionInfo
 from .network import NetworkMonitor
+from .screencast import ScreencastMonitor
 from .validation import validate_directory_path, validate_url
 
 
@@ -41,6 +42,7 @@ class BrowserSession:
         self.driver: Driver | None = None
         self.history = SessionHistoryTracker(self.session_id)
         self.network_monitor = NetworkMonitor(self.download_dir)
+        self.screencast_monitor = ScreencastMonitor(self.download_dir)
 
         # Cached elements from the most recent scout (invalidated on action/navigation)
         self._cached_elements: list[InteractiveElement] | None = None
@@ -94,6 +96,9 @@ class BrowserSession:
 
     def close(self) -> SessionCloseResult:
         """Close the browser and release all resources."""
+        if self.screencast_monitor.recording:
+            self.screencast_monitor.stop()
+        self.screencast_monitor.cleanup()
         self.network_monitor.stop()
 
         total_actions = len(self.history.actions)

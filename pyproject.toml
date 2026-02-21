@@ -23,6 +23,9 @@ Homepage = "https://github.com/stemado/otto"
 Repository = "https://github.com/stemado/otto"
 Issues = "https://github.com/stemado/otto/issues"
 
+[project.optional-dependencies]
+video = ["imageio-ffmpeg>=0.5.1"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

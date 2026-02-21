@@ -23,6 +23,8 @@ from .models import (
     ActionRecord,
     FillSecretResult,
     MonitorResult,
+    RecordingRecord,
+    RecordingResult,
     ScoutReport,
     SessionCloseResult,
     SessionHistory,
@@ -702,6 +704,108 @@ async def monitor_network(
                 events=download_events,
                 total_captured=len(monitor.events),
                 monitoring_active=monitor.monitoring,
+            ).model_dump(exclude_none=True)
+
+        case _:
+            return {"error": f"Unknown command: {command}"}
+
+
+# --- Tool: record_video ---
+
+
+@mcp.tool()
+async def record_video(
+    session_id: str,
+    command: Literal["start", "stop", "status"],
+    max_width: int = 1280,
+    max_height: int = 720,
+    quality: int = 80,
+    target_fps: int = 10,
+    ctx: Context[ServerSession, AppContext] = None,
+) -> dict:
+    """Control video recording for the current browser session.
+
+    Records the browser screen using CDP screencast and encodes to MP4.
+    Requires ffmpeg for video encoding: install imageio-ffmpeg (pip install 'imageio-ffmpeg')
+    or have ffmpeg on your system PATH. Without it, raw JPEG frames are saved instead.
+
+    Args:
+        session_id: Active session ID.
+        command: start: begin recording. stop: stop and encode video. status: check recording state.
+        max_width: Maximum video width in pixels. Default: 1280.
+        max_height: Maximum video height in pixels. Default: 720.
+        quality: JPEG frame quality (1-100). Default: 80.
+        target_fps: Target frames per second (approximate). Default: 10.
+    """
+    max_width = min(max(max_width, 320), 1920)
+    max_height = min(max(max_height, 240), 1080)
+    quality = min(max(quality, 1), 100)
+    target_fps = min(max(target_fps, 1), 30)
+
+    app_ctx = _get_ctx(ctx)
+    session = _get_session(app_ctx, session_id)
+    monitor = session.screencast_monitor
+
+    match command:
+        case "start":
+            await ctx.info(f"Starting video recording ({max_width}x{max_height} @ {target_fps}fps)...")
+            await asyncio.to_thread(
+                monitor.start, session.driver, max_width, max_height, quality, target_fps
+            )
+            return RecordingResult(
+                recording_active=True,
+                started_at=monitor._started_at,
+                target_fps=target_fps,
+                resolution=f"{max_width}x{max_height}",
+            ).model_dump(exclude_none=True)
+
+        case "stop":
+            await ctx.info("Stopping recording and encoding video...")
+            result = await asyncio.to_thread(monitor.stop)
+
+            # Record in session history
+            from datetime import datetime, timezone
+            record = RecordingRecord(
+                started_at=monitor._started_at or "",
+                stopped_at=monitor._stopped_at or "",
+                duration_seconds=result["duration_seconds"],
+                frame_count=result["frame_count"],
+                video_path=result.get("video_path"),
+                encoded=result["encoded"],
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+            session.history.record_recording(record)
+
+            recording_result = RecordingResult(
+                recording_active=False,
+                video_path=result.get("video_path"),
+                frames_dir=result.get("frames_dir"),
+                frame_count=result["frame_count"],
+                duration_seconds=result["duration_seconds"],
+                encoded=result["encoded"],
+                encode_warning=result.get("encode_warning"),
+            )
+
+            if result["encoded"]:
+                await ctx.info(
+                    f"Video saved: {result['video_path']} "
+                    f"({result['frame_count']} frames, {result['duration_seconds']}s)"
+                )
+            else:
+                warning = result.get("encode_warning") or result.get("error") or "Encoding unavailable"
+                await ctx.warning(warning)
+
+            return recording_result.model_dump(exclude_none=True)
+
+        case "status":
+            status = monitor.status()
+            return RecordingResult(
+                recording_active=status["recording"],
+                frame_count=status["frame_count"],
+                started_at=status["started_at"],
+                elapsed_seconds=status["elapsed_seconds"],
+                target_fps=status["target_fps"],
+                resolution=status["resolution"],
             ).model_dump(exclude_none=True)
 
         case _:
