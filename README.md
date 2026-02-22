@@ -8,6 +8,10 @@
 </p>
 
 <p align="center">
+  <em>"If you know, you know."</em> <strong>— Otto</strong>
+</p>
+
+<p align="center">
   <img src="assets/demo-hero.gif" alt="Otto in action: scout, fill, submit, capture" width="640">
 </p>
 
