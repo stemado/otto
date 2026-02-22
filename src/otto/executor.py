@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .actions import _get_key_map
+from .actions import _get_key_map, _parse_scroll_value, _selector_targets_iframe
 from .network import NetworkMonitor
 from .validation import validate_directory_path, validate_url
 from .workflow import Workflow, WorkflowStep, WorkflowVariable
@@ -242,6 +242,12 @@ class WorkflowExecutor:
                     self.driver.get(step.value)
 
                 case "click":
+                    if _selector_targets_iframe(step.selector):
+                        raise ValueError(
+                            f"Cannot click an <iframe> element directly "
+                            f"(selector: {step.selector}). Use frame_context "
+                            f"to interact with iframe content."
+                        )
                     target.click(step.selector)
 
                 case "type":
@@ -256,8 +262,14 @@ class WorkflowExecutor:
                         target.select_option(step.selector, value=step.value)
 
                 case "scroll":
-                    amount = int(step.value) if step.value else 500
-                    self.driver.run_js(f"window.scrollBy(0, {json.dumps(amount)})")
+                    lowered = (step.value or "").strip().lower()
+                    if lowered == "top":
+                        target.run_js("window.scrollTo(0, 0)")
+                    elif lowered == "bottom":
+                        target.run_js("window.scrollTo(0, document.body.scrollHeight)")
+                    else:
+                        amount = _parse_scroll_value(step.value)
+                        target.run_js(f"window.scrollBy(0, {json.dumps(amount)})")
 
                 case "wait":
                     if step.selector:

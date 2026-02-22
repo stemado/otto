@@ -655,6 +655,8 @@ async def monitor_network(
     url_pattern: str | None = None,
     timeout_ms: int = 30000,
     capture_response_body: bool = False,
+    limit: int = 100,
+    offset: int = 0,
     ctx: Context[ServerSession, AppContext] = None,
 ) -> dict:
     """Control network monitoring for the current session.
@@ -668,6 +670,8 @@ async def monitor_network(
         url_pattern: Optional regex pattern to filter captured requests by URL.
         timeout_ms: For wait_for_download: maximum wait time. Default: 30000.
         capture_response_body: Whether to capture response bodies (adds overhead). Default: false.
+        limit: Maximum number of events to return in a query response. Default: 100.
+        offset: Number of matching events to skip before returning results. Default: 0.
     """
     timeout_ms = min(max(timeout_ms, 0), MAX_TIMEOUT_MS)
     app_ctx = _get_ctx(ctx)
@@ -694,15 +698,21 @@ async def monitor_network(
             ).model_dump(exclude_none=True)
 
         case "query":
-            events = await asyncio.to_thread(monitor.query, url_pattern)
-            # Record only new events in session history (avoid duplicates on repeated queries)
+            # Record ALL new events in session history (bypasses pagination)
+            all_events = await asyncio.to_thread(monitor.query_all)
             existing_count = len(session.history.network_events)
-            all_events = await asyncio.to_thread(monitor.query)
             for event in all_events[existing_count:]:
                 session.history.record_network_event(event)
+            # Get matching events with pagination for the tool response
+            all_matching = await asyncio.to_thread(monitor.query_all, url_pattern)
+            total_matched = len(all_matching)
+            # Apply pagination locally (avoids a 3rd query call)
+            paginated = all_matching[offset:] if offset > 0 else all_matching
+            events = paginated[:limit] if limit > 0 else paginated
             return sanitize_response(MonitorResult(
                 events=events,
-                total_captured=len(monitor.events),
+                total_captured=monitor.total_count,
+                total_matched=total_matched,
                 monitoring_active=monitor.monitoring,
             ).model_dump(exclude_none=True))
 
