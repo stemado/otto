@@ -18,6 +18,8 @@ You need three things installed before the plugin will work:
 
 `uv` creates an isolated virtual environment and installs all dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) automatically the first time the server starts. Zero manual dependency management.
 
+> **Auto-checked:** Otto runs a SessionStart hook that verifies Python, Node.js, and Chrome are available every time you start a session. If anything is missing, you'll see a clear error message before the server starts.
+
 ## Installation
 
 Two commands in Claude Code:
@@ -85,6 +87,20 @@ This is a deliberate security design. The `.env` file should be gitignored, and 
 
 The `.env` search order is: explicit path > `OTTO_ENV_FILE` env var > `.env` in the current working directory.
 
+### Upgrading to the Encrypted Vault
+
+For production workflows, you can upgrade from plaintext `.env` to an encrypted vault:
+
+```bash
+pip install 'otto[vault]'     # one-time setup
+otto-vault init                # creates an encrypted vault, stores key in OS keyring
+otto-vault set MY_PASSWORD     # prompts for the value, encrypts and stores it
+```
+
+After this, `fill_secret` automatically checks the vault first and falls back to `.env`. Your existing workflows don't need any changes -- the resolution is transparent.
+
+The vault key is stored in your OS keyring (Windows Credential Manager, macOS Keychain, or Linux Secret Service), so credentials are protected even if someone copies your project directory.
+
 ## Exporting a Replayable Script
 
 Once you've walked through a complete workflow (login, navigate, click export, etc.), run:
@@ -130,7 +146,7 @@ Useful flags:
 
 Variables are resolved in this order: `--var` CLI args > environment variables > workflow defaults. If a variable can't be resolved, the executor exits with code 2 before launching a browser.
 
-## The 11 MCP Tools
+## The 12 MCP Tools
 
 These are the tools Claude uses behind the scenes. You don't call them directly — Claude picks the right one based on what you ask — but knowing what's available helps you understand what's possible.
 
@@ -145,6 +161,7 @@ These are the tools Claude uses behind the scenes. You don't call them directly 
 | `take_screenshot` | Capture the current browser state as an image |
 | `inspect_element` | Deep-inspect a single element (visibility, overlays, shadow DOM) |
 | `monitor_network` | Capture/query network traffic and downloads |
+| `record_video` | Record browser screen to MP4 via CDP screencast |
 | `get_session_history` | Get the full structured record of everything you did |
 | `close_session` | Close the browser and clean up |
 
@@ -155,3 +172,4 @@ These are the tools Claude uses behind the scenes. You don't call them directly 
 - **CAPTCHAs** — Botasaurus reduces how often they appear, but can't solve them. If you hit one, you'll need to handle it manually in the browser window.
 - **The browser window is real** — it opens a visible Chrome window on your screen (unless you pass `headless: true`). You can watch Claude drive it in real time.
 - **Don't repeat logins** — the session is stateful. Once you're logged in, stay logged in. Repeated rapid login attempts trigger security detection and CAPTCHAs.
+- **Found a bug?** -- Run `/report bug` and Claude will gather diagnostics, check for duplicates, and file a GitHub issue for you.

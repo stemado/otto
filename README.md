@@ -32,6 +32,9 @@ Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. 
 | **XHR interception** | Built-in network monitor with filtering | No | No | Limited |
 | **Video recording** | CDP screencast to MP4 | No | No | Built-in |
 | **Export to script** | One command, runs unattended | No | No | No |
+| **Encrypted credentials** | Vault with OS keyring | No | No | No |
+| **Credential scrubbing** | Automatic in all output | No | No | No |
+| **Dependency pre-checks** | SessionStart hook | No | No | No |
 | **Best for** | Complex enterprise portals | Testing your own app | Interactive debugging | Cross-browser test suites |
 
 <p align="center">
@@ -91,9 +94,10 @@ Then restart Claude Code to pick up the new version.
 
 ### What gets installed
 
-- **11 MCP tools** for browser automation (scout, click, type, monitor network, etc.)
-- **2 slash commands** -- `/scout <url>` and `/export-workflow [name]`
+- **12 MCP tools** for browser automation (scout, click, type, monitor network, record video, etc.)
+- **3 slash commands** -- `/scout <url>`, `/export-workflow [name]`, and `/report [bug|feature|friction]`
 - **1 skill** -- Otto responds to phrases like "automate this site", "scout this page", "build a bot"
+- **1 hook** -- SessionStart dependency check (verifies Python, Node.js, Chrome on every session)
 - Python dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are installed automatically by `uv` on first run
 
 ## Usage
@@ -119,15 +123,27 @@ Launch a stealth browser and get a structural overview of any page: iframe hiera
 
 ### `/export-workflow [name]`
 
-After completing a workflow interactively, export it as a replayable script. Produces two files in `workflows/`:
+After completing a workflow interactively, export it as a self-contained directory package in `workflows/<name>/`:
 
 - A standalone Python script with numbered, commented steps
 - A portable JSON workflow definition (replayable via `workflow-run`)
+- `requirements.txt` for dependency installation
+- `.env.example` for credential configuration (only generated when credentials are detected)
 
 Credentials are automatically parameterized -- real values never appear in the output.
 
 ```
 /export-workflow portal-report-download
+```
+
+### `/report [bug|feature|friction]`
+
+File a GitHub issue against the Otto repository. Claude collects a description, gathers environment diagnostics, checks for duplicates, and drafts the issue for your approval before submitting.
+
+```
+/report bug
+/report feature
+/report friction
 ```
 
 ### Video Recording
@@ -198,6 +214,23 @@ Otto exposes 12 tools via MCP, organized by function:
   <img src="assets/demo-fill-secret.gif" alt="Form fields filled without exposing credentials" width="640">
 </p>
 
+### Encrypted Credential Vault
+
+For production use, Otto supports an encrypted vault as an upgrade from plaintext `.env` files. Credentials are encrypted with a key stored in your OS keyring (Windows Credential Manager, macOS Keychain, or Linux Secret Service).
+
+```bash
+pip install 'otto[vault]'     # install vault dependencies
+otto-vault init                # create an encrypted vault
+otto-vault set MY_PASSWORD     # store a credential (prompts for value)
+otto-vault list                # see what's stored
+```
+
+Once configured, `fill_secret` resolves credentials from the vault first, falling back to `.env` if not found. No code changes needed -- the same `fill_secret` calls work with both storage backends.
+
+### Runtime Credential Scrubbing
+
+Any credential injected via `fill_secret` is automatically redacted from all subsequent tool output. If a secret value appears in a scout report, error message, or network response, it is replaced with `[REDACTED]` before reaching the conversation. This is a defense-in-depth measure -- even if a page reflects your password back in the DOM, it won't leak into the chat.
+
 ## Network Interception
 
 Otto's `monitor_network` tool captures XHR, Fetch, and other requests in real time with URL pattern filtering. This is how Otto handles sites that hide media behind blob URLs, trigger downloads via signed URLs, or make API calls that you need to replay in your automation script.
@@ -221,12 +254,16 @@ Several tools give Claude browser access. They solve different problems.
 
 ## Security
 
-Otto includes lightweight defenses against prompt injection via web content:
+Otto includes multiple layers of defense:
 
-- **Invisible character stripping** -- Removes zero-width Unicode characters that could hide malicious instructions in page text, attributes, and network responses.
-- **Content boundary markers** -- Wraps web-sourced data with delimiters that tell the LLM to treat it as data, not instructions.
+- **Credential vault** -- Encrypted storage with OS keyring integration (see above)
+- **Runtime scrubbing** -- Secrets injected via `fill_secret` are redacted from all tool output
+- **URL validation** -- Blocks dangerous schemes (`file://`, `javascript://`), cloud metadata endpoints (169.254.169.254), and localhost access
+- **Path traversal protection** -- Validates all file paths to prevent directory escape
+- **Invisible character stripping** -- Removes zero-width Unicode characters that could hide prompt injection payloads in page text
+- **Content boundary markers** -- Wraps web-sourced data with delimiters that distinguish data from instructions
 
-These defenses reduce the attack surface but are not a silver bullet. See [`CLAUDE.md`](CLAUDE.md) for details.
+See [`CLAUDE.md`](CLAUDE.md) for the full security model.
 
 ## License
 
