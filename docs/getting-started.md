@@ -93,17 +93,30 @@ Once you've walked through a complete workflow (login, navigate, click export, e
 /export-workflow acme-export
 ```
 
-This generates two files in `workflows/`:
+This generates a self-contained directory package in `workflows/acme-export/`:
 
-1. **`acme-export.py`** — A standalone Python script using `botasaurus-driver` with numbered, commented steps. Credentials are parameterized as variables at the top.
-2. **`acme-export.json`** — A portable JSON workflow definition.
+```
+workflows/acme-export/
+├── acme-export.py           # Standalone replay script (loads creds from .env)
+├── acme-export.json         # Portable workflow JSON
+├── requirements.txt         # pip install -r requirements.txt
+└── .env.example             # Credential template (only if credentials detected)
+```
+
+Quick start:
+```
+cd workflows/acme-export
+pip install -r requirements.txt
+cp .env.example .env   # fill in your credentials
+python acme-export.py
+```
 
 ## Replaying Workflows Without Claude
 
 The JSON workflow can be replayed from the command line without Claude in the loop:
 
 ```
-workflow-run workflows/acme-export.json \
+workflow-run workflows/acme-export/acme-export.json \
   --var USERNAME=admin --var PASSWORD=secret
 ```
 

@@ -51,20 +51,62 @@ Scan all `type` actions for sensitive fields:
 
 Structure the script exactly like this:
 
+**When credentials ARE detected** (from Step 4 or pre-parameterized `${VAR}` from `fill_secret`):
+
 ```python
 """Workflow: <workflow-name>
 Generated from Otto session on <date>.
 Session: <session_id> | Actions: <count> | Duration: <if available>
+
+Setup:
+    cd workflows/<workflow-name>
+    pip install -r requirements.txt
+    cp .env.example .env   # fill in your credentials
+    python <workflow-name>.py
+"""
+import os
+import time
+from dotenv import load_dotenv
+from botasaurus_driver import Driver
+
+load_dotenv()
+
+# --- Configuration (update .env or override these) ---
+USERNAME = os.getenv("USERNAME", "your_username")
+PASSWORD = os.getenv("PASSWORD", "your_password")
+BASE_URL = "<first navigation URL>"
+```
+
+For pre-parameterized `${VAR}` variables from `fill_secret` (e.g., `BC_USERNAME`, `BC_PASSWORD`), use the actual env var names:
+```python
+BC_USERNAME = os.getenv("BC_USERNAME", "your_username")
+BC_PASSWORD = os.getenv("BC_PASSWORD", "your_password")
+```
+
+**When NO credentials are detected:**
+
+```python
+"""Workflow: <workflow-name>
+Generated from Otto session on <date>.
+Session: <session_id> | Actions: <count> | Duration: <if available>
+
+Setup:
+    cd workflows/<workflow-name>
+    pip install -r requirements.txt
+    python <workflow-name>.py
 """
 import time
 from botasaurus_driver import Driver
 
-# --- Configuration (update these before running) ---
-USERNAME = "your_username"
-PASSWORD = "your_password"
+# --- Configuration ---
 BASE_URL = "<first navigation URL>"
+```
 
+Note: When no credentials are detected, omit `os`, `dotenv`, `load_dotenv()`, and all credential variables. Do NOT include the `cp .env.example .env` line in the docstring.
 
+**Common script body (used by both variants):**
+
+```python
 def run_workflow():
     """Replay the recorded browser workflow."""
     driver = Driver(headless=False)
@@ -92,7 +134,7 @@ Rules for the script:
 - Add `time.sleep(0.5)` between steps that trigger page navigation (where `url_changed` is true in the action record)
 - Import `time` only if sleep calls are needed
 - Only include the `USERNAME`/`PASSWORD` variables if credentials were actually detected
-- The script must be **self-contained** — runnable with just `python workflow.py` after installing botasaurus-driver
+- The script must be **self-contained** — runnable with `pip install -r requirements.txt && python <name>.py` from the workflow directory
 
 ## Step 5b: Generate workflow JSON
 
@@ -113,17 +155,77 @@ The JSON file is the portable, machine-parseable workflow definition. It can be 
 - If no name was provided, derive one from the workflow: e.g., "login-to-reports" based on the navigations and key actions
 - Use the name for both the filename and the docstring
 
-## Step 7: Write the files
+## Step 7: Write the workflow package
 
-Write both files to the `workflows/` directory in the current project. Create the directory if it doesn't exist:
+Write a self-contained directory package to `workflows/<name>/`. Create the directory if it doesn't exist.
 
-- **Python script:** `workflows/<workflow-name>.py`
-- **Workflow JSON:** `workflows/<workflow-name>.json`
+### 7a: Write the Python script
 
-Present both files to the user and tell them:
+Write to `workflows/<name>/<name>.py`.
 
-- The file paths where they were saved
-- How to run the Python script: `python workflows/<name>.py`
+### 7b: Write the workflow JSON
+
+Write to `workflows/<name>/<name>.json`.
+
+### 7c: Write requirements.txt
+
+Write to `workflows/<name>/requirements.txt`:
+
+**When credentials were detected:**
+```
+botasaurus-driver>=4.0.0
+python-dotenv>=1.0.0
+```
+
+**When NO credentials were detected** (script doesn't import dotenv):
+```
+botasaurus-driver>=4.0.0
+```
+
+### 7d: Write .env.example (conditional)
+
+**Only create this file if credential variables were detected in Step 4.**
+
+Write to `workflows/<name>/.env.example`. Generate from the variables detected:
+
+```
+# Credentials for <workflow-name>
+# Copy this file to .env and fill in your values:
+#   cp .env.example .env
+
+# Login username
+USERNAME=
+# Login password
+PASSWORD=
+```
+
+For pre-parameterized vars (from `fill_secret`), use their original names:
+```
+# Username for <site>
+BC_USERNAME=
+# Password for <site>
+BC_PASSWORD=
+```
+
+### 7e: Present quick-start instructions
+
+Tell the user the directory path and show a quick-start block:
+
+**When credentials exist:**
+```
+cd workflows/<name>
+pip install -r requirements.txt
+cp .env.example .env   # fill in your credentials
+python <name>.py
+```
+
+**When NO credentials:**
+```
+cd workflows/<name>
+pip install -r requirements.txt
+python <name>.py
+```
+
+Also mention:
 - That the JSON file is the portable workflow definition for use with any executor
-- What they need to update (credentials, BASE_URL if different environment)
-- That botasaurus-driver must be installed: `pip install botasaurus-driver`
+- What they need to update (BASE_URL if targeting a different environment)
