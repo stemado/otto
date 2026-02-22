@@ -31,6 +31,7 @@ from .models import (
     SessionInfo,
 )
 from .secrets import EnvLoadError, load_env_vars
+from .sanitize import sanitize_response
 from .scout import build_element_summary, filter_elements, scout_page
 from .session import BrowserSession
 
@@ -204,17 +205,17 @@ async def scout_page_tool(
     await ctx.info(f"Scout complete: {report.page_summary}")
 
     if detail_level == "full":
-        return report.model_dump(exclude_none=True)
+        return sanitize_response(report.model_dump(exclude_none=True))
 
     # Summary mode: return structure + counts, no element list
     element_summary = build_element_summary(report.interactive_elements)
-    return {
+    return sanitize_response({
         "page_metadata": report.page_metadata.model_dump(exclude_none=True),
         "iframe_map": [f.model_dump(exclude_none=True) for f in report.iframe_map],
         "shadow_dom_boundaries": [s.model_dump(exclude_none=True) for s in report.shadow_dom_boundaries],
         "element_summary": element_summary.model_dump(exclude_none=True),
         "page_summary": report.page_summary,
-    }
+    })
 
 
 # --- Tool: find_elements ---
@@ -296,11 +297,11 @@ async def find_elements(
 
     await ctx.info(f"Found {len(matched)} element(s) matching query")
 
-    return {
+    return sanitize_response({
         "matched": len(matched),
         "total_on_page": len(elements),
         "elements": stripped,
-    }
+    })
 
 
 # --- Tool: execute_action ---
@@ -357,7 +358,7 @@ async def execute_action_tool(
     else:
         await ctx.warning(f"Action failed: {result.error}")
 
-    return result.model_dump(exclude_none=True)
+    return sanitize_response(result.model_dump(exclude_none=True))
 
 
 # --- Tool: fill_secret ---
@@ -517,7 +518,7 @@ async def execute_javascript(
     else:
         await ctx.warning(f"JS execution failed: {result.error}")
 
-    return result.model_dump(exclude_none=True)
+    return sanitize_response(result.model_dump(exclude_none=True))
 
 
 # --- Tool: take_screenshot ---
@@ -633,7 +634,7 @@ async def inspect_element_tool(
     else:
         await ctx.warning(f"Element not found: {selector}")
 
-    return inspection.model_dump(exclude_none=True)
+    return sanitize_response(inspection.model_dump(exclude_none=True))
 
 
 # --- Tool: monitor_network ---
@@ -691,20 +692,20 @@ async def monitor_network(
             all_events = await asyncio.to_thread(monitor.query)
             for event in all_events[existing_count:]:
                 session.history.record_network_event(event)
-            return MonitorResult(
+            return sanitize_response(MonitorResult(
                 events=events,
                 total_captured=len(monitor.events),
                 monitoring_active=monitor.monitoring,
-            ).model_dump(exclude_none=True)
+            ).model_dump(exclude_none=True))
 
         case "wait_for_download":
             await ctx.info(f"Waiting for download (timeout: {timeout_ms}ms)...")
             download_events = await asyncio.to_thread(monitor.wait_for_download, timeout_ms)
-            return MonitorResult(
+            return sanitize_response(MonitorResult(
                 events=download_events,
                 total_captured=len(monitor.events),
                 monitoring_active=monitor.monitoring,
-            ).model_dump(exclude_none=True)
+            ).model_dump(exclude_none=True))
 
         case _:
             return {"error": f"Unknown command: {command}"}
@@ -836,7 +837,7 @@ async def get_session_history(
         f"Session history: {len(history.actions)} actions, "
         f"{len(history.scouts)} scouts, {len(history.network_events)} network events"
     )
-    return history.model_dump(exclude_none=True)
+    return sanitize_response(history.model_dump(exclude_none=True))
 
 
 # --- Tool: close_session ---

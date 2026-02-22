@@ -54,6 +54,8 @@ Before installing Otto, make sure you have:
 3. **[uv](https://docs.astral.sh/uv/)** -- Python package manager used by the MCP server (`pip install uv` or see [install docs](https://docs.astral.sh/uv/getting-started/installation/))
 4. **Google Chrome or Chromium** -- Botasaurus drives it via Chrome DevTools Protocol
 
+> **On macOS?** See the [macOS Setup Guide](docs/macos-setup.md) for step-by-step Homebrew commands and troubleshooting.
+
 ### Step 1: Add the marketplace
 
 In Claude Code, run:
@@ -211,6 +213,15 @@ Several tools give Claude browser access. They solve different problems.
 **[Chrome Extension MCP](https://docs.anthropic.com/en/docs/claude-code/mcp)** is for interactive debugging and inspection. It operates inside your real browser session -- useful when you're already looking at the page and want Claude to help you understand or manipulate it.
 
 **[Playwright MCP](https://browsermcp.io/)** is for cross-browser test automation. You provide selectors and assertions; it runs deterministic test suites across engines.
+
+## Security
+
+Otto includes lightweight defenses against prompt injection via web content:
+
+- **Invisible character stripping** -- Removes zero-width Unicode characters that could hide malicious instructions in page text, attributes, and network responses.
+- **Content boundary markers** -- Wraps web-sourced data with delimiters that tell the LLM to treat it as data, not instructions.
+
+These defenses reduce the attack surface but are not a silver bullet. See [`CLAUDE.md`](CLAUDE.md) for details.
 
 ## License
 

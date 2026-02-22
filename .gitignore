@@ -29,6 +29,8 @@ downloads/
 
 # Environment variables
 .env
+.bc.env
+*.env
 
 # Exported workflow files (may contain credentials)
 workflows/
