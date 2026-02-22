@@ -47,6 +47,10 @@ class BrowserSession:
         # Cached elements from the most recent scout (invalidated on action/navigation)
         self._cached_elements: list[InteractiveElement] | None = None
 
+        # Secret values registered by fill_secret — used to scrub tool responses.
+        # In-memory only, never serialized to history or tool responses.
+        self._secret_values: set[str] = set()
+
     def launch(self, url: str | None = None) -> SessionInfo:
         """Launch the browser and optionally navigate to an initial URL."""
         os.makedirs(self.download_dir, exist_ok=True)
@@ -130,6 +134,34 @@ class BrowserSession:
     def invalidate_element_cache(self) -> None:
         """Invalidate the element cache (call after actions/navigations)."""
         self._cached_elements = None
+
+    def register_secret(self, value: str) -> str | None:
+        """Register a secret value for response scrubbing.
+
+        Returns a warning message if the value is too short to scrub safely,
+        or None if registration succeeded.
+        """
+        if value and len(value) >= 4:
+            self._secret_values.add(value)
+            return None
+        return (
+            "Warning: credential is shorter than 4 characters and cannot be "
+            "scrubbed from tool responses without excessive false positives."
+        )
+
+    def scrub_secrets(self, text: str) -> str:
+        """Best-effort replacement of known secret values with [REDACTED].
+
+        Catches accidental credential leaks in tool responses.
+        Not a security boundary — JS can encode/transform values to bypass.
+        """
+        if not self._secret_values:
+            return text
+        result = text
+        for secret in sorted(self._secret_values, key=len, reverse=True):
+            if secret in result:
+                result = result.replace(secret, "[REDACTED]")
+        return result
 
     @property
     def is_active(self) -> bool:

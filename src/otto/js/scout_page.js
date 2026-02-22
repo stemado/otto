@@ -69,8 +69,11 @@ function isVisible(el) {
 
 // --- Utility: get visible text from an element ---
 function getVisibleText(el) {
-  // For inputs, use placeholder or value
+  // For inputs, use placeholder or value (but never expose password values)
   if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+    if (el.type === "password") {
+      return el.placeholder || "";
+    }
     return el.placeholder || el.value || "";
   }
   if (el.tagName === "SELECT") {

@@ -206,17 +206,17 @@ async def scout_page_tool(
     await ctx.info(f"Scout complete: {report.page_summary}")
 
     if detail_level == "full":
-        return sanitize_response(report.model_dump(exclude_none=True))
+        return session.scrub_secrets(sanitize_response(report.model_dump(exclude_none=True)))
 
     # Summary mode: return structure + counts, no element list
     element_summary = build_element_summary(report.interactive_elements)
-    return sanitize_response({
+    return session.scrub_secrets(sanitize_response({
         "page_metadata": report.page_metadata.model_dump(exclude_none=True),
         "iframe_map": [f.model_dump(exclude_none=True) for f in report.iframe_map],
         "shadow_dom_boundaries": [s.model_dump(exclude_none=True) for s in report.shadow_dom_boundaries],
         "element_summary": element_summary.model_dump(exclude_none=True),
         "page_summary": report.page_summary,
-    })
+    }))
 
 
 # --- Tool: find_elements ---
@@ -298,11 +298,11 @@ async def find_elements(
 
     await ctx.info(f"Found {len(matched)} element(s) matching query")
 
-    return sanitize_response({
+    return session.scrub_secrets(sanitize_response({
         "matched": len(matched),
         "total_on_page": len(elements),
         "elements": stripped,
-    })
+    }))
 
 
 # --- Tool: execute_action ---
@@ -359,7 +359,7 @@ async def execute_action_tool(
     else:
         await ctx.warning(f"Action failed: {result.error}")
 
-    return sanitize_response(result.model_dump(exclude_none=True))
+    return session.scrub_secrets(sanitize_response(result.model_dump(exclude_none=True)))
 
 
 # --- Tool: fill_secret ---
@@ -401,10 +401,14 @@ async def fill_secret(
     timestamp = datetime.now(timezone.utc).isoformat()
 
     # Load the secret value server-side (vault first, then .env fallback)
+    scrub_warning: str | None = None
     try:
         resolver = _get_resolver(app_ctx)
         resolved = resolver.get_with_source(env_var)
         secret_value = resolved.value
+
+        # Register for response scrubbing (Layer 2 credential defense)
+        scrub_warning = session.register_secret(secret_value)
 
         # One-time hint when credentials are loaded from plaintext .env
         if resolved.source == CredentialSource.ENV and not app_ctx._vault_hint_shown:
@@ -477,6 +481,7 @@ async def fill_secret(
         url_changed=url_before != url_after,
         current_url=url_after,
         error=error,
+        warning=scrub_warning,
         elapsed_ms=elapsed,
     )
 
@@ -485,7 +490,10 @@ async def fill_secret(
     else:
         await ctx.warning(f"fill_secret failed: {error}")
 
-    return result.model_dump(exclude_none=True)
+    # Scrub the response — driver errors can include the typed value in messages
+    return session.scrub_secrets(
+        sanitize_response(result.model_dump(exclude_none=True))
+    )
 
 
 # --- Tool: execute_javascript ---
@@ -526,7 +534,7 @@ async def execute_javascript(
     else:
         await ctx.warning(f"JS execution failed: {result.error}")
 
-    return sanitize_response(result.model_dump(exclude_none=True))
+    return session.scrub_secrets(sanitize_response(result.model_dump(exclude_none=True)))
 
 
 # --- Tool: take_screenshot ---
@@ -642,7 +650,7 @@ async def inspect_element_tool(
     else:
         await ctx.warning(f"Element not found: {selector}")
 
-    return sanitize_response(inspection.model_dump(exclude_none=True))
+    return session.scrub_secrets(sanitize_response(inspection.model_dump(exclude_none=True)))
 
 
 # --- Tool: monitor_network ---
@@ -709,21 +717,21 @@ async def monitor_network(
             # Apply pagination locally (avoids a 3rd query call)
             paginated = all_matching[offset:] if offset > 0 else all_matching
             events = paginated[:limit] if limit > 0 else paginated
-            return sanitize_response(MonitorResult(
+            return session.scrub_secrets(sanitize_response(MonitorResult(
                 events=events,
                 total_captured=monitor.total_count,
                 total_matched=total_matched,
                 monitoring_active=monitor.monitoring,
-            ).model_dump(exclude_none=True))
+            ).model_dump(exclude_none=True)))
 
         case "wait_for_download":
             await ctx.info(f"Waiting for download (timeout: {timeout_ms}ms)...")
             download_events = await asyncio.to_thread(monitor.wait_for_download, timeout_ms)
-            return sanitize_response(MonitorResult(
+            return session.scrub_secrets(sanitize_response(MonitorResult(
                 events=download_events,
                 total_captured=len(monitor.events),
                 monitoring_active=monitor.monitoring,
-            ).model_dump(exclude_none=True))
+            ).model_dump(exclude_none=True)))
 
         case _:
             return {"error": f"Unknown command: {command}"}
@@ -855,7 +863,7 @@ async def get_session_history(
         f"Session history: {len(history.actions)} actions, "
         f"{len(history.scouts)} scouts, {len(history.network_events)} network events"
     )
-    return sanitize_response(history.model_dump(exclude_none=True))
+    return session.scrub_secrets(sanitize_response(history.model_dump(exclude_none=True)))
 
 
 # --- Tool: close_session ---

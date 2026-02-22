@@ -280,4 +280,5 @@ class FillSecretResult(BaseModel):
     url_changed: bool = Field(default=False)
     current_url: str = Field(default="")
     error: str | None = Field(default=None)
+    warning: str | None = Field(default=None, description="Scrubbing limitation warning for short credentials")
     elapsed_ms: int = Field(default=0)
