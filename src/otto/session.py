@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 from botasaurus_driver import Driver
 
+from .download_manager import DownloadManager
 from .history import SessionHistoryTracker
 from .models import InteractiveElement, SessionCloseResult, SessionInfo
 from .network import NetworkMonitor
@@ -43,6 +44,7 @@ class BrowserSession:
         self.history = SessionHistoryTracker(self.session_id)
         self.network_monitor = NetworkMonitor(self.download_dir)
         self.screencast_monitor = ScreencastMonitor(self.download_dir)
+        self.download_manager = DownloadManager(self.download_dir, self.session_id)
 
         # Cached elements from the most recent scout (invalidated on action/navigation)
         self._cached_elements: list[InteractiveElement] | None = None
@@ -67,6 +69,9 @@ class BrowserSession:
 
         try:
             self.driver = Driver(**driver_kwargs)
+
+            # Initialize download management (session-scoped dir + CDP config)
+            self.download_manager.start(self.driver)
 
             current_url = "about:blank"
             if url:
@@ -104,6 +109,7 @@ class BrowserSession:
             self.screencast_monitor.stop()
         self.screencast_monitor.cleanup()
         self.network_monitor.stop()
+        self.download_manager.cleanup()
 
         total_actions = len(self.history.actions)
         total_scouts = len(self.history.scouts)

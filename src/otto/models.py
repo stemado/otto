@@ -75,6 +75,31 @@ class NetworkEvent(BaseModel):
     download_size_bytes: int | None = Field(default=None)
 
 
+class DownloadEvent(BaseModel):
+    """A tracked download from the CDP Browser.DownloadWillBegin/DownloadProgress events."""
+
+    guid: str = Field(description="Chrome's unique download identifier")
+    suggested_filename: str = Field(default="", description="Server-suggested filename")
+    url: str = Field(default="", description="URL that triggered the download")
+    file_path: str = Field(default="", description="Absolute path to GUID-named file on disk")
+    total_bytes: float = Field(default=0)
+    received_bytes: float = Field(default=0)
+    state: str = Field(default="pending", description="pending | in_progress | completed | canceled")
+    timestamp: str = Field(description="ISO format timestamp")
+
+
+class ProcessResult(BaseModel):
+    """Result of processing a downloaded file (convert + rename + move)."""
+
+    success: bool
+    source_path: str = Field(default="", description="Original GUID file path")
+    converted_path: str | None = Field(default=None, description="Path after conversion (in temp dir)")
+    final_path: str | None = Field(default=None, description="Path after rename + move to target directory")
+    source_format: str = Field(default="", description="Detected or specified source format")
+    target_format: str = Field(default="", description="Target format for conversion")
+    error: str | None = Field(default=None, description="On failure, includes temp file path for recovery")
+
+
 class PageMetadata(BaseModel):
     """Basic page state information."""
 

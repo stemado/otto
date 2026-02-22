@@ -21,8 +21,10 @@ from mcp.types import CallToolResult, ImageContent, TextContent
 from .actions import execute_action, inspect_element, run_javascript, take_screenshot
 from .models import (
     ActionRecord,
+    DownloadEvent,
     FillSecretResult,
     MonitorResult,
+    ProcessResult,
     RecordingRecord,
     RecordingResult,
     ScoutReport,
@@ -726,6 +728,14 @@ async def monitor_network(
 
         case "wait_for_download":
             await ctx.info(f"Waiting for download (timeout: {timeout_ms}ms)...")
+            download_event = await asyncio.to_thread(
+                session.download_manager.wait_for_download, timeout_ms
+            )
+            if download_event:
+                return session.scrub_secrets(sanitize_response(
+                    download_event.model_dump(exclude_none=True)
+                ))
+            # Fallback to network monitor's header-based detection
             download_events = await asyncio.to_thread(monitor.wait_for_download, timeout_ms)
             return session.scrub_secrets(sanitize_response(MonitorResult(
                 events=download_events,
@@ -735,6 +745,56 @@ async def monitor_network(
 
         case _:
             return {"error": f"Unknown command: {command}"}
+
+
+# --- Tool: process_download ---
+
+
+@mcp.tool()
+async def process_download(
+    session_id: str,
+    source_format: str = "auto",
+    target_format: str = "csv",
+    target_filename: str | None = None,
+    target_directory: str | None = None,
+    guid: str | None = None,
+    ctx: Context[ServerSession, AppContext] = None,
+) -> dict:
+    """Process a downloaded file: convert format, rename, and move to destination.
+
+    Call this after a download completes (via monitor_network's wait_for_download).
+    Handles format conversion (e.g., SpreadsheetML 2003 XML to CSV), filename
+    pattern application, and file delivery to a target directory.
+
+    Args:
+        session_id: Active session ID.
+        source_format: Source file format. Use "auto" to detect from file contents.
+                       Known formats: spreadsheetml_2003, xls_binary, xlsx, csv.
+        target_format: Target format to convert to (e.g., "csv"). Default: "csv".
+        target_filename: Filename pattern with tokens: {MM}, {dd}, {yyyy}, {HH}, {mm}, {suggested}.
+                         Example: "Complete Enrollments Report {MM}.{dd}.{yyyy}.csv"
+        target_directory: Destination directory. UNC paths supported (e.g., \\\\server\\share\\path).
+        guid: Specific download GUID to process. If omitted, processes the most recent completed download.
+    """
+    app_ctx = _get_ctx(ctx)
+    session = _get_session(app_ctx, session_id)
+
+    await ctx.info("Processing download...")
+    result = await asyncio.to_thread(
+        session.download_manager.process_download,
+        guid=guid,
+        source_format=source_format,
+        target_format=target_format,
+        target_filename=target_filename,
+        target_directory=target_directory,
+    )
+
+    if result.success:
+        await ctx.info(f"Download processed: {result.final_path}")
+    else:
+        await ctx.warning(f"Processing failed: {result.error}")
+
+    return session.scrub_secrets(sanitize_response(result.model_dump(exclude_none=True)))
 
 
 # --- Tool: record_video ---
