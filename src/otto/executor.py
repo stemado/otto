@@ -23,21 +23,46 @@ if TYPE_CHECKING:
 _VAR_PATTERN = re.compile(r"\$\{(\w+)\}")
 
 
+def _get_vault_resolver():
+    """Try to create a non-interactive CredentialResolver.  Returns None on failure."""
+    try:
+        from .credential_resolver import CredentialResolver
+        from .vault import DEFAULT_VAULT_PATH
+
+        if not DEFAULT_VAULT_PATH.exists():
+            return None
+        return CredentialResolver(interactive=False)
+    except Exception:
+        return None
+
+
+def _try_vault(resolver, name: str) -> str | None:
+    """Attempt to read a credential from the vault resolver.  Never raises."""
+    try:
+        return resolver.get(name)
+    except Exception:
+        return None
+
+
 def resolve_variables(workflow: Workflow, cli_vars: dict[str, str]) -> Workflow:
     """Resolve all ${VAR} references in a workflow's steps.
 
-    Resolution order: cli_vars > environment variables > workflow variable defaults.
+    Resolution order: cli_vars > environment variables > vault > .env > defaults.
     Returns a new Workflow with all references resolved.
     Exits with code 2 if any variable cannot be resolved.
     """
     resolved_values: dict[str, str] = {}
     unresolved: list[str] = []
 
+    vault_resolver = _get_vault_resolver()
+
     for var_name, var_def in workflow.variables.items():
         if var_name in cli_vars:
             resolved_values[var_name] = cli_vars[var_name]
         elif var_name in os.environ:
             resolved_values[var_name] = os.environ[var_name]
+        elif vault_resolver is not None and (v := _try_vault(vault_resolver, var_name)) is not None:
+            resolved_values[var_name] = v
         elif var_def.default:
             resolved_values[var_name] = var_def.default
         else:

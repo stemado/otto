@@ -30,6 +30,7 @@ from .models import (
     SessionHistory,
     SessionInfo,
 )
+from .credential_resolver import CredentialResolver, CredentialSource
 from .secrets import EnvLoadError, load_env_vars
 from .sanitize import sanitize_response
 from .scout import build_element_summary, filter_elements, scout_page
@@ -54,7 +55,8 @@ class AppContext:
 
     sessions: dict[str, BrowserSession] = field(default_factory=dict)
     max_sessions: int = 1
-    env_vars: dict[str, str] | None = field(default=None)
+    resolver: CredentialResolver | None = field(default=None)
+    _vault_hint_shown: bool = False
     _launch_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
@@ -82,6 +84,8 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
                 await asyncio.to_thread(session.close)
             except Exception:
                 pass
+        if ctx.resolver is not None:
+            ctx.resolver.close()
 
 
 # --- MCP Server Instance ---
@@ -104,14 +108,11 @@ def _get_session(app_ctx: AppContext, session_id: str) -> BrowserSession:
     return session
 
 
-def _load_env(app_ctx: AppContext) -> dict[str, str]:
-    """Lazy-load .env variables on first use."""
-    if app_ctx.env_vars is None:
-        try:
-            app_ctx.env_vars = load_env_vars()
-        except EnvLoadError as e:
-            raise ValueError(str(e)) from e
-    return app_ctx.env_vars
+def _get_resolver(app_ctx: AppContext) -> CredentialResolver:
+    """Lazy-initialize the credential resolver on first use."""
+    if app_ctx.resolver is None:
+        app_ctx.resolver = CredentialResolver(interactive=False)
+    return app_ctx.resolver
 
 
 # --- Tool: launch_session ---
@@ -399,22 +400,29 @@ async def fill_secret(
     start = time.perf_counter()
     timestamp = datetime.now(timezone.utc).isoformat()
 
-    # Load the secret value server-side
+    # Load the secret value server-side (vault first, then .env fallback)
     try:
-        env = _load_env(app_ctx)
-    except ValueError as e:
+        resolver = _get_resolver(app_ctx)
+        resolved = resolver.get_with_source(env_var)
+        secret_value = resolved.value
+
+        # One-time hint when credentials are loaded from plaintext .env
+        if resolved.source == CredentialSource.ENV and not app_ctx._vault_hint_shown:
+            app_ctx._vault_hint_shown = True
+            await ctx.info(
+                "Tip: credentials are loaded from .env (plaintext). "
+                "For encrypted storage: pip install 'otto[vault]' && otto-vault init"
+            )
+    except KeyError:
+        return FillSecretResult(
+            success=False, env_var=env_var, selector=selector,
+            error=f"Credential '{env_var}' not found in vault or .env file.",
+        ).model_dump(exclude_none=True)
+    except Exception as e:
         return FillSecretResult(
             success=False, env_var=env_var, selector=selector,
             error=str(e),
         ).model_dump(exclude_none=True)
-
-    if env_var not in env:
-        return FillSecretResult(
-            success=False, env_var=env_var, selector=selector,
-            error=f"Environment variable '{env_var}' not found. Check your .env file.",
-        ).model_dump(exclude_none=True)
-
-    secret_value = env[env_var]
 
     # Get URL before action (driver access is sync — must use thread)
     try:

@@ -16,6 +16,7 @@ dependencies = [
 
 [project.scripts]
 otto = "otto.server:main"
+otto-vault = "otto.vault_cli:main"
 workflow-run = "otto.executor:main"
 
 [project.urls]
@@ -25,6 +26,10 @@ Issues = "https://github.com/stemado/otto/issues"
 
 [project.optional-dependencies]
 video = ["imageio-ffmpeg>=0.5.1"]
+vault = [
+    "cryptography>=43.0.0",
+    "keyring>=25.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]
