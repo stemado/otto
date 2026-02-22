@@ -53,6 +53,7 @@ Before installing Otto, make sure you have:
 2. **Python 3.11+** -- check with `python --version`
 3. **[uv](https://docs.astral.sh/uv/)** -- Python package manager used by the MCP server (`pip install uv` or see [install docs](https://docs.astral.sh/uv/getting-started/installation/))
 4. **Google Chrome or Chromium** -- Botasaurus drives it via Chrome DevTools Protocol
+5. **[Node.js](https://nodejs.org)** -- required by Botasaurus's anti-detection system (`brew install node` on macOS, or see [nodejs.org](https://nodejs.org))
 
 > **On macOS?** See the [macOS Setup Guide](docs/macos-setup.md) for step-by-step Homebrew commands and troubleshooting.
 
