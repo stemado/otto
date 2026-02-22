@@ -266,6 +266,7 @@ class MonitorResult(BaseModel):
 
     events: list[NetworkEvent] = Field(default_factory=list)
     total_captured: int = 0
+    total_matched: int = Field(default=0, description="Total matching events before pagination")
     monitoring_active: bool = False
 
 

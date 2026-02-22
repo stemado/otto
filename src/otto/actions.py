@@ -77,6 +77,13 @@ def execute_action(
         match action:
             case "click":
                 _require(selector, "selector required for click")
+                if _selector_targets_iframe(selector):
+                    raise ValueError(
+                        f"Cannot click an <iframe> element directly (selector: {selector}). "
+                        f"To interact with content inside an iframe, use the "
+                        f"'frame_context' parameter with this selector, then click "
+                        f"elements within the iframe."
+                    )
                 # Capture DOM fingerprint before click for verification
                 pre_click_fingerprint = _capture_dom_fingerprint(driver)
                 target.click(selector)
@@ -105,9 +112,17 @@ def execute_action(
                 action_desc = f"Navigated to '{value}'"
 
             case "scroll":
-                amount = int(value) if value else 500
-                driver.run_js(f"window.scrollBy(0, {json.dumps(amount)})")
-                action_desc = f"Scrolled by {amount}px"
+                lowered = (value or "").strip().lower()
+                if lowered == "top":
+                    target.run_js("window.scrollTo(0, 0)")
+                    action_desc = "Scrolled to top"
+                elif lowered == "bottom":
+                    target.run_js("window.scrollTo(0, document.body.scrollHeight)")
+                    action_desc = "Scrolled to bottom"
+                else:
+                    amount = _parse_scroll_value(value)
+                    target.run_js(f"window.scrollBy(0, {json.dumps(amount)})")
+                    action_desc = f"Scrolled by {amount}px"
 
             case "wait":
                 # value is always milliseconds for consistency with wait_after
@@ -247,6 +262,45 @@ def _resolve_target(driver: Driver, frame_context: str | None):
 def _require(val, message: str) -> None:
     if not val:
         raise ValueError(message)
+
+
+def _selector_targets_iframe(selector: str) -> bool:
+    """Check if a CSS selector targets an <iframe> element (zero-cost, no browser round-trip).
+
+    Splits on CSS combinators to extract the final simple selector, then checks
+    if it starts with 'iframe' followed by end-of-string, class, id, attribute,
+    or pseudo selector.  Does NOT match custom elements like 'iframe-wrapper'.
+    """
+    parts = re.split(r'[\s>+~]+', selector.strip())
+    final = parts[-1] if parts else selector
+    return bool(re.match(r'^iframe(?:$|[#.\[:(])', final, re.IGNORECASE))
+
+
+def _parse_scroll_value(value: str | None) -> int:
+    """Parse a scroll value string into pixels.
+
+    Supports:
+      - None or empty: default 500px
+      - "up": -500px
+      - "down": 500px
+      - numeric string: parsed as pixels (positive = down, negative = up)
+
+    Raises ValueError for unrecognized strings.
+    """
+    if not value:
+        return 500
+    lowered = value.strip().lower()
+    if lowered == "down":
+        return 500
+    if lowered == "up":
+        return -500
+    try:
+        return int(value)
+    except ValueError:
+        raise ValueError(
+            f"Invalid scroll value: '{value}'. "
+            f"Use 'up', 'down', 'top', 'bottom', or a pixel amount (e.g. '500', '-300')."
+        ) from None
 
 
 def _capture_dom_fingerprint(driver: Driver) -> dict | None:

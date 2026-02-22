@@ -73,19 +73,52 @@ class NetworkMonitor:
         """Stop network monitoring."""
         self.monitoring = False
 
-    def query(self, url_pattern: str | None = None) -> list[NetworkEvent]:
+    def query(
+        self,
+        url_pattern: str | None = None,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[NetworkEvent]:
         """Return captured events, optionally filtered by URL pattern.
 
         If capture_bodies was enabled, lazily fetches response bodies
         for events that haven't been fetched yet.
+
+        Args:
+            url_pattern: Optional regex to filter by URL.
+            limit: Maximum events to return. 0 means no limit. Default: 100.
+            offset: Skip this many matching events. Default: 0.
         """
         self._fetch_pending_bodies()
 
         with self._lock:
             if url_pattern:
                 pat = validate_regex_pattern(url_pattern)
-                return [e for e in self.events if pat.search(e.url)]
-            return list(self.events)
+                matched = [e for e in self.events if pat.search(e.url)]
+            else:
+                matched = list(self.events)
+
+        if offset > 0:
+            matched = matched[offset:]
+        if limit > 0:
+            matched = matched[:limit]
+
+        return matched
+
+    def query_all(self, url_pattern: str | None = None) -> list[NetworkEvent]:
+        """Return ALL captured events without pagination limits.
+
+        Internal method for history recording — bypasses the default limit
+        so that session history captures every event.
+        """
+        return self.query(url_pattern, limit=0)
+
+    @property
+    def total_count(self) -> int:
+        """Total number of captured events (not affected by query pagination)."""
+        with self._lock:
+            return len(self.events)
 
     def wait_for_download(self, timeout_ms: int = 30000) -> list[NetworkEvent]:
         """Block until a download event is detected or timeout."""
