@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from cryptography.fernet import Fernet
 
+from otto.vault import VaultKeyError
 from otto.vault_keys import KEYRING_SERVICE, KEYRING_USERNAME, KeySource, PBKDF2_ITERATIONS
 
 
@@ -170,7 +171,6 @@ def test_keyring_not_installed_falls_through(
     # Simulate keyring not installed by making import fail
     with patch.dict("sys.modules", {"keyring": None}):
         # Non-interactive, no keyring → should raise
-        from otto.vault_keys import VaultKeyError
         with pytest.raises(VaultKeyError, match="No encryption key available"):
             KeySource.resolve(db_path, interactive=False)
 
@@ -188,9 +188,50 @@ def test_keyring_backend_error_falls_through(
     mock_keyring.get_password.side_effect = Exception("No keyring backend")
 
     with patch.dict("sys.modules", {"keyring": mock_keyring}):
-        from otto.vault_keys import VaultKeyError
         with pytest.raises(VaultKeyError, match="No encryption key available"):
             KeySource.resolve(db_path, interactive=False)
+
+
+def test_keyring_import_error_logs_debug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """When keyring is not installed, a debug message should be logged."""
+    db_path = tmp_path / "vault.db"
+    _create_vault_db(db_path)
+
+    monkeypatch.delenv("OTTO_VAULT_PASSWORD", raising=False)
+
+    import logging
+
+    with caplog.at_level(logging.DEBUG, logger="otto.vault_keys"):
+        with patch.dict("sys.modules", {"keyring": None}):
+            with pytest.raises(VaultKeyError):
+                KeySource.resolve(db_path, interactive=False)
+
+    assert any("keyring not installed" in r.message for r in caplog.records)
+
+
+def test_keyring_backend_error_logs_debug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """When keyring backend fails, a debug message with the error should be logged."""
+    db_path = tmp_path / "vault.db"
+    _create_vault_db(db_path)
+
+    monkeypatch.delenv("OTTO_VAULT_PASSWORD", raising=False)
+
+    mock_keyring = MagicMock()
+    mock_keyring.get_password.side_effect = RuntimeError("No suitable keyring backend")
+
+    import logging
+
+    with caplog.at_level(logging.DEBUG, logger="otto.vault_keys"):
+        with patch.dict("sys.modules", {"keyring": mock_keyring}):
+            with pytest.raises(VaultKeyError):
+                KeySource.resolve(db_path, interactive=False)
+
+    assert any("keyring backend error" in r.message for r in caplog.records)
+    assert any("No suitable keyring backend" in r.message for r in caplog.records)
 
 
 # --- Non-interactive mode ---
@@ -208,7 +249,6 @@ def test_resolve_noninteractive_never_prompts(
     # No keyring, no env var, non-interactive → should raise, not prompt
     with patch.dict("sys.modules", {"keyring": None}):
         with patch("otto.vault_keys._getpass_mod") as mock_getpass:
-            from otto.vault_keys import VaultKeyError
             with pytest.raises(VaultKeyError):
                 KeySource.resolve(db_path, interactive=False)
             mock_getpass.getpass.assert_not_called()

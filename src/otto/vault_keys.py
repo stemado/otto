@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import base64
 import getpass as _getpass_mod
+import logging
 import os
 import sqlite3
 from pathlib import Path
@@ -24,6 +25,8 @@ if TYPE_CHECKING:
     from cryptography.fernet import Fernet
 
 from otto.vault import VaultKeyError
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -84,9 +87,13 @@ class KeySource:
             key = Fernet.generate_key()
             keyring.set_password(KEYRING_SERVICE, KEYRING_USERNAME, key.decode())
             return Fernet(key)
-        except Exception:
-            # keyring not installed, no backend, or other error — fall through.
-            pass
+        except ImportError:
+            logger.debug(
+                "keyring not installed — skipping OS keyring. "
+                "Install with: pip install 'otto[vault]'"
+            )
+        except Exception as exc:
+            logger.debug("keyring backend error — skipping OS keyring: %s", exc)
 
         # 4. Interactive getpass prompt
         if interactive and os.isatty(0):
