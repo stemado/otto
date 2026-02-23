@@ -357,6 +357,7 @@
   /* ══════════════════════════════════════════
      SECTION 4: WHY OTTO (comparison table)
      ══════════════════════════════════════════ */
+  .comparison-wrapper { overflow-x: auto; }
   .comparison-table {
     width: 100%;
     border-collapse: collapse;
@@ -444,6 +445,25 @@
     text-align: center;
     padding: 40px 0;
   }
+  .cta-commands {
+    display: inline-block;
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 32px;
+    margin-bottom: 16px;
+  }
+  .cta-links {
+    margin-top: 16px;
+    font-size: 0.85rem;
+  }
+  .cta-links a {
+    color: var(--cyan);
+    text-decoration: none;
+  }
+  .cta-links a:hover { text-decoration: underline; }
+  .cta-links .dim { margin: 0 8px; }
 
   /* ══════════════════════════════════════════
      SIMULATED WEBSITE ELEMENTS
@@ -682,32 +702,32 @@
     <h2 class="section-header">How it works</h2>
     <p class="section-subtitle">Six capabilities that turn a chat into a browser automation pipeline.</p>
     <div class="features-grid" id="features-grid">
-      <div class="feature-card" data-demo="discovers">
+      <div class="feature-card" tabindex="0" role="button" aria-expanded="false" data-demo="discovers">
         <div class="feature-card-title">Discovers page structure for you</div>
         <div class="feature-card-summary">Other tools require selectors upfront. Otto scouts and finds them.</div>
         <div class="feature-card-detail"><div class="card-demo-inner" id="demo-discovers"></div></div>
       </div>
-      <div class="feature-card" data-demo="credentials">
+      <div class="feature-card" tabindex="0" role="button" aria-expanded="false" data-demo="credentials">
         <div class="feature-card-title">Credentials never touch the conversation</div>
         <div class="feature-card-summary">Passwords injected from encrypted vault. Never visible in chat.</div>
         <div class="feature-card-detail"><div class="card-demo-inner" id="demo-credentials"></div></div>
       </div>
-      <div class="feature-card" data-demo="network">
+      <div class="feature-card" tabindex="0" role="button" aria-expanded="false" data-demo="network">
         <div class="feature-card-title">Catches what the browser hides</div>
         <div class="feature-card-summary">XHR calls, blob: URLs, signed download links &mdash; all intercepted.</div>
         <div class="feature-card-detail"><div class="card-demo-inner" id="demo-network"></div></div>
       </div>
-      <div class="feature-card" data-demo="iframes">
+      <div class="feature-card" tabindex="0" role="button" aria-expanded="false" data-demo="iframes">
         <div class="feature-card-title">Works through iframes and shadow DOM</div>
         <div class="feature-card-summary">Triple-nested iframes? Shadow DOM? Otto pierces all of it.</div>
         <div class="feature-card-detail"><div class="card-demo-inner" id="demo-iframes"></div></div>
       </div>
-      <div class="feature-card" data-demo="antidetect">
+      <div class="feature-card" tabindex="0" role="button" aria-expanded="false" data-demo="antidetect">
         <div class="feature-card-title">Passes bot detection</div>
         <div class="feature-card-summary">Botasaurus handles fingerprint evasion automatically.</div>
         <div class="feature-card-detail"><div class="card-demo-inner" id="demo-antidetect"></div></div>
       </div>
-      <div class="feature-card" data-demo="export">
+      <div class="feature-card" tabindex="0" role="button" aria-expanded="false" data-demo="export">
         <div class="feature-card-title">Exports standalone scripts</div>
         <div class="feature-card-summary">Run it again without Claude. Complete workflow package.</div>
         <div class="feature-card-detail"><div class="card-demo-inner" id="demo-export"></div></div>
@@ -722,7 +742,7 @@
     <div class="section-divider"></div>
     <h2 class="section-header">Why Otto?</h2>
     <p class="section-subtitle">How Otto compares to the alternatives you're already considering.</p>
-    <div id="comparison-container">
+    <div id="comparison-container" class="comparison-wrapper">
       <table class="comparison-table">
         <thead>
           <tr>
@@ -873,14 +893,14 @@
     <div class="section-divider"></div>
     <h2 class="section-header">Get started</h2>
     <div class="cta-area" id="cta-area">
-      <div style="display:inline-block;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 32px;margin-bottom:16px;">
+      <div class="cta-commands">
         <div style="margin-bottom:6px;"><span class="dim">$</span> <span class="cyan">/plugin marketplace add</span> stemado/otto-marketplace</div>
         <div><span class="dim">$</span> <span class="cyan">/plugin install</span> otto@otto-marketplace</div>
       </div>
-      <div style="margin-top:16px;font-size:0.85rem;">
-        <a href="docs/getting-started.md" style="color:var(--cyan);text-decoration:none;">Getting Started Guide</a>
-        <span class="dim" style="margin:0 8px;">&middot;</span>
-        <a href="https://github.com/stemado/otto" style="color:var(--cyan);text-decoration:none;">GitHub Repository</a>
+      <div class="cta-links">
+        <a href="getting-started.md">Getting Started Guide</a>
+        <span class="dim">&middot;</span>
+        <a href="https://github.com/stemado/otto" rel="noopener noreferrer">GitHub Repository</a>
       </div>
     </div>
   </div>
@@ -1335,36 +1355,46 @@ const cardDemos = {
 
 const cardEngines = {};
 
+function toggleCard(card) {
+  const demoId = card.dataset.demo;
+  const wasActive = card.classList.contains('active');
+
+  // Close all cards, stop all engines, reset aria
+  document.querySelectorAll('.feature-card').forEach(c => {
+    c.classList.remove('active');
+    c.setAttribute('aria-expanded', 'false');
+    const id = c.dataset.demo;
+    if (cardEngines[id]) cardEngines[id].stop();
+  });
+
+  if (wasActive) return; // collapsed
+
+  // Expand this card
+  card.classList.add('active');
+  card.setAttribute('aria-expanded', 'true');
+  const demo = cardDemos[demoId];
+  if (!demo) return;
+
+  // Clear previous demo content
+  const container = document.querySelector(demo.target);
+  if (container) container.innerHTML = '';
+
+  // Play mini-demo
+  const demoEngine = new AnimationEngine();
+  cardEngines[demoId] = demoEngine;
+  demoEngine.play(demo.scene);
+
+  // Scroll into view
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 document.querySelectorAll('.feature-card').forEach(card => {
-  card.addEventListener('click', () => {
-    const demoId = card.dataset.demo;
-    const wasActive = card.classList.contains('active');
-
-    // Close all cards, stop all engines
-    document.querySelectorAll('.feature-card').forEach(c => {
-      c.classList.remove('active');
-      const id = c.dataset.demo;
-      if (cardEngines[id]) cardEngines[id].stop();
-    });
-
-    if (wasActive) return; // collapsed
-
-    // Expand this card
-    card.classList.add('active');
-    const demo = cardDemos[demoId];
-    if (!demo) return;
-
-    // Clear previous demo content
-    const container = document.querySelector(demo.target);
-    if (container) container.innerHTML = '';
-
-    // Play mini-demo
-    const demoEngine = new AnimationEngine();
-    cardEngines[demoId] = demoEngine;
-    demoEngine.play(demo.scene);
-
-    // Scroll into view
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  card.addEventListener('click', () => toggleCard(card));
+  card.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleCard(card);
+    }
   });
 });
 </script>
