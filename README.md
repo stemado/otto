@@ -8,8 +8,10 @@
 </p>
 
 <p align="center">
-  <img src="assets/demo-hero.gif" alt="Otto: describe a task, Otto scouts and automates it" width="640">
-  <br><em><a href="docs/showcase.html">Explore all features and tools &rarr;</a></em>
+  <a href="https://stemado.github.io/otto/showcase.html">
+    <img src="assets/demo-showcase.png" alt="Otto showcase: portal dashboard with scout and fill_secret tool-boxes" width="640">
+  </a>
+  <br><em><a href="https://stemado.github.io/otto/showcase.html">Interactive showcase &rarr;</a></em>
 </p>
 
 ---
