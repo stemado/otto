@@ -1,6 +1,6 @@
 [project]
 name = "otto"
-version = "0.3.2"
+version = "0.4.0"
 description = "Stealth browser automation for Claude Code"
 requires-python = ">=3.11"
 authors = [{name = "sdoherty"}]
