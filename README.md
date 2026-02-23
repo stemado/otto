@@ -3,50 +3,41 @@
 </p>
 
 <p align="center">
-  <em>Automate any website by describing what you want in plain English.<br>
+  <em>Turn any web portal into a programmable API.<br>
   No web development knowledge required.</em>
 </p>
 
 <p align="center">
-  <em>"If you know, you know."</em> <strong>— Otto</strong>
-</p>
-
-<p align="center">
-  <img src="assets/demo-hero.gif" alt="Otto in action: scout, fill, submit, capture" width="640">
+  <img src="assets/demo-hero.gif" alt="Otto: describe a task, Otto scouts and automates it" width="640">
+  <br><em><a href="docs/showcase.html">Explore all features and tools &rarr;</a></em>
 </p>
 
 ---
 
-Most browser plugins let Claude interact with pages you already understand. Otto is built for the opposite scenario: enterprise portals, vendor dashboards, and third-party sites where you don't control the HTML, the page actively resists automation, and you need a script that runs unattended -- without Claude in the loop.
+Every enterprise has systems that were never designed to be automated -- vendor dashboards, HR portals, benefits platforms, internal tools locked behind logins with no API in sight. Otto fills that gap.
 
-Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. You describe a task conversationally -- *"log into the portal, navigate to Reports, export the CSV"* -- and Claude scouts the page structure, drives a stealth browser through the workflow, and exports a standalone Python script you can run on a schedule. Built on [Botasaurus](https://github.com/omkarcloud/botasaurus) for fingerprint evasion, so the sites that block Playwright and Puppeteer don't block Otto.
+Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. You describe a task conversationally -- *"log into the portal, navigate to Reports, export the CSV"* -- and Claude scouts the page structure, drives the browser through the workflow, and exports a standalone Python script that runs unattended. It conforms to whatever interface it encounters and produces a replayable automation that behaves like the API that should have existed all along.
 
 ## Why Otto?
 
 |   | Otto | Dev-Browser | Chrome Extension MCP | Playwright MCP |
 | --- | --- | --- | --- | --- |
-| **Anti-detection** | Botasaurus stealth fingerprinting | Playwright (detectable) | Browser extension (detectable) | Playwright (detectable) |
-| **Bot check score** | Passes sannysoft, creepjs | Fails common checks | N/A | Fails common checks |
+| **Works on portals you don't control** | Yes -- enterprise portals, vendor dashboards, HR systems | Limited -- designed for your own app | Limited -- your active browser session | Limited -- designed for your own app |
 | **Page discovery** | Compact scout reports (~200 tokens) | You provide selectors | You provide selectors | You provide selectors |
 | **Credential safety** | Never appears in conversation | Plaintext in context | Plaintext in context | Plaintext in context |
 | **XHR interception** | Built-in network monitor with filtering | No | No | Limited |
-| **Video recording** | CDP screencast to MP4 | No | No | Built-in |
 | **Export to script** | One command, runs unattended | No | No | No |
 | **Encrypted credentials** | Vault with OS keyring | No | No | No |
 | **Credential scrubbing** | Automatic in all output | No | No | No |
+| **Video recording** | CDP screencast to MP4 | No | No | Built-in |
 | **Dependency pre-checks** | SessionStart hook | No | No | No |
-| **Best for** | Complex enterprise portals | Testing your own app | Interactive debugging | Cross-browser test suites |
-
-<p align="center">
-  <img src="assets/demo-antidetection.gif" alt="Otto passes all bot detection tests on sannysoft.com" width="640">
-  <br><em>Otto passes every bot detection test on sannysoft.com — 51 tests, 0 failures.</em>
-</p>
+| **Best for** | Enterprise systems without APIs | Testing your own app | Interactive debugging | Cross-browser test suites |
 
 ## The Problem
 
-Enterprise portals are tough terrain for automation. The login form lives inside a triple-nested iframe. The export button triggers an XHR that returns a signed URL. The page fingerprints your browser and blocks anything that smells like Playwright.
+Enterprise portals are tough terrain for automation. The login form lives inside a triple-nested iframe. The export button triggers an XHR that returns a signed URL instead of a file. The page uses dynamic selectors that change between deployments.
 
-Otto handles all of this so you don't have to. Claude scouts the page, discovers selectors from reconnaissance rather than guesswork, drives the workflow step by step, and exports a production-grade script -- no web development knowledge required.
+Other browser automation tools require you to already know the page structure and provide selectors upfront. Otto takes the opposite approach -- Claude scouts the page, discovers selectors from reconnaissance rather than guesswork, drives the workflow step by step, and exports a production-grade script. No web development knowledge required.
 
 > **New here?** The [Getting Started guide](docs/getting-started.md) walks through a complete example from scout to scheduled script.
 
@@ -59,8 +50,8 @@ Before installing Otto, make sure you have:
 1. **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** -- Otto is a Claude Code plugin
 2. **Python 3.11+** -- check with `python --version`
 3. **[uv](https://docs.astral.sh/uv/)** -- Python package manager used by the MCP server (`pip install uv` or see [install docs](https://docs.astral.sh/uv/getting-started/installation/))
-4. **Google Chrome or Chromium** -- Botasaurus drives it via Chrome DevTools Protocol
-5. **[Node.js](https://nodejs.org)** -- required by Botasaurus's anti-detection system (`brew install node` on macOS, or see [nodejs.org](https://nodejs.org))
+4. **Google Chrome or Chromium** -- Otto drives it via Chrome DevTools Protocol
+5. **[Node.js](https://nodejs.org)** -- required by the browser driver's runtime (`brew install node` on macOS, or see [nodejs.org](https://nodejs.org))
 
 > **On macOS?** See the [macOS Setup Guide](docs/macos-setup.md) for step-by-step Homebrew commands and troubleshooting.
 
@@ -106,11 +97,11 @@ Describe what you want automated:
 
 > "Scout the login page, log in with the credentials in .env, navigate to Reports > Export, and download the CSV."
 
-Claude launches a stealth browser, scouts the page, drives through the workflow, and exports a standalone script when done. You watch it work and redirect as needed -- the same way you'd pair-program with a colleague who happens to have a browser open.
+Claude launches a browser, scouts the page, drives through the workflow, and exports a standalone script when done. You watch it work and redirect as needed -- the same way you'd pair-program with a colleague who happens to have a browser open.
 
 ### `/scout <url>`
 
-Launch a stealth browser and get a structural overview of any page: iframe hierarchy, shadow DOM boundaries, interactive element counts. The session stays alive for follow-up interactions.
+Launch a browser and get a structural overview of any page: iframe hierarchy, shadow DOM boundaries, interactive element counts. The session stays alive for follow-up interactions.
 
 ```
 /scout https://example.com/portal/login
@@ -193,7 +184,7 @@ Otto exposes 12 tools via MCP, organized by function:
 
 | Tool | Purpose |
 |------|---------|
-| `launch_session` | Open a stealth browser with optional URL, proxy, and headless mode |
+| `launch_session` | Open a browser session with optional URL, proxy, and headless mode |
 | `scout_page_tool` | Structural page overview: metadata, iframes, shadow DOM, element counts |
 | `find_elements` | Search for interactive elements by text, type, or CSS selector |
 | `execute_action_tool` | Perform a single action: click, type, select, navigate, scroll, hover |
@@ -245,7 +236,7 @@ Otto's `monitor_network` tool captures XHR, Fetch, and other requests in real ti
 
 Several tools give Claude browser access. They solve different problems.
 
-**Otto** is for automating sites you don't control -- enterprise portals, HR systems, vendor dashboards -- where the HTML is opaque, anti-bot detection is present, and you want a script that runs unattended. Otto discovers page structure for you, handles stealth, and exports standalone workflows.
+**Otto** is for automating systems you don't control -- enterprise portals, HR platforms, vendor dashboards -- where the HTML is unknown, there's no API, and you want a script that runs unattended. Otto discovers page structure for you and exports standalone workflows.
 
 **[Dev-Browser](https://github.com/anthropics/claude-code-plugins)** is for testing your own application during development. You provide the selectors; it drives Playwright against known HTML.
 
@@ -265,6 +256,17 @@ Otto includes multiple layers of defense:
 - **Content boundary markers** -- Wraps web-sourced data with delimiters that distinguish data from instructions
 
 See [`CLAUDE.md`](CLAUDE.md) for the full security model.
+
+## Technical Details
+
+Otto uses [Botasaurus](https://github.com/omkarcloud/botasaurus) as its browser driver, which provides reliable browser automation through Chrome DevTools Protocol. This handles the browser fingerprinting and detection challenges that cause other automation tools to fail on enterprise portals that weren't designed for programmatic access.
+
+<p align="center">
+  <img src="assets/demo-antidetection.gif" alt="Otto passes browser automation detection tests" width="640">
+  <br><em>Otto passes standard browser automation detection tests — enterprise portals see a normal browser session.</em>
+</p>
+
+For the full technical architecture, see [`CLAUDE.md`](CLAUDE.md).
 
 ## License
 
