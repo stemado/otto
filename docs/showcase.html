@@ -723,7 +723,75 @@
     <h2 class="section-header">Why Otto?</h2>
     <p class="section-subtitle">How Otto compares to the alternatives you're already considering.</p>
     <div id="comparison-container">
-      <!-- Comparison table added in Task 5 -->
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="otto-col">Otto</th>
+            <th>Dev-Browser</th>
+            <th>Chrome Extension MCP</th>
+            <th>Playwright MCP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Works on portals you don't control</td>
+            <td class="otto-col">Yes &mdash; enterprise portals, vendor dashboards, HR systems</td>
+            <td>Limited &mdash; designed for your own app</td>
+            <td>Limited &mdash; your active browser session</td>
+            <td>Limited &mdash; designed for your own app</td>
+          </tr>
+          <tr>
+            <td>Page discovery</td>
+            <td class="otto-col">Compact scout reports (~200 tokens)</td>
+            <td>You provide selectors</td>
+            <td>You provide selectors</td>
+            <td>You provide selectors</td>
+          </tr>
+          <tr>
+            <td>Credential safety</td>
+            <td class="otto-col">Never appears in conversation</td>
+            <td>Plaintext in context</td>
+            <td>Plaintext in context</td>
+            <td>Plaintext in context</td>
+          </tr>
+          <tr>
+            <td>XHR interception</td>
+            <td class="otto-col">Built-in network monitor with filtering</td>
+            <td>No</td>
+            <td>No</td>
+            <td>Limited</td>
+          </tr>
+          <tr>
+            <td>Export to script</td>
+            <td class="otto-col">One command, runs unattended</td>
+            <td>No</td>
+            <td>No</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Encrypted credentials</td>
+            <td class="otto-col">Vault with OS keyring</td>
+            <td>No</td>
+            <td>No</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Credential scrubbing</td>
+            <td class="otto-col">Automatic in all output</td>
+            <td>No</td>
+            <td>No</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Best for</td>
+            <td class="otto-col"><strong>Enterprise systems without APIs</strong></td>
+            <td>Testing your own app</td>
+            <td>Interactive debugging</td>
+            <td>Cross-browser test suites</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -735,7 +803,66 @@
     <h2 class="section-header">12 MCP Tools</h2>
     <p class="section-subtitle">Everything Claude needs to explore, interact, and capture &mdash; organized by workflow stage.</p>
     <div class="tools-grid" id="tools-grid">
-      <!-- 12 tool cards added in Task 5 -->
+      <div class="tool-card">
+        <span class="tool-badge session">Session</span>
+        <div class="tool-card-name">launch_session</div>
+        <div class="tool-card-desc">Open a stealth browser</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge recon">Recon</span>
+        <div class="tool-card-name">scout_page_tool</div>
+        <div class="tool-card-desc">Structural overview in ~200 tokens</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge recon">Recon</span>
+        <div class="tool-card-name">find_elements</div>
+        <div class="tool-card-desc">Search by text, type, or selector</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge interaction">Interaction</span>
+        <div class="tool-card-name">execute_action_tool</div>
+        <div class="tool-card-desc">Click, type, select, navigate</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge interaction">Interaction</span>
+        <div class="tool-card-name">fill_secret</div>
+        <div class="tool-card-desc">Inject credential without exposure</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge interaction">Interaction</span>
+        <div class="tool-card-name">execute_javascript</div>
+        <div class="tool-card-desc">Run JS in page context</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge recon">Recon</span>
+        <div class="tool-card-name">take_screenshot</div>
+        <div class="tool-card-desc">Visual verification</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge recon">Recon</span>
+        <div class="tool-card-name">inspect_element</div>
+        <div class="tool-card-desc">Deep element diagnostics</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge observation">Observation</span>
+        <div class="tool-card-name">monitor_network</div>
+        <div class="tool-card-desc">Capture XHR/Fetch traffic</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge observation">Observation</span>
+        <div class="tool-card-name">record_video</div>
+        <div class="tool-card-desc">CDP screencast to MP4</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge session">Session</span>
+        <div class="tool-card-name">get_session_history</div>
+        <div class="tool-card-desc">Full structured action log</div>
+      </div>
+      <div class="tool-card">
+        <span class="tool-badge session">Session</span>
+        <div class="tool-card-name">close_session</div>
+        <div class="tool-card-desc">Release browser resources</div>
+      </div>
     </div>
   </div>
 
@@ -746,7 +873,15 @@
     <div class="section-divider"></div>
     <h2 class="section-header">Get started</h2>
     <div class="cta-area" id="cta-area">
-      <!-- Install CTA content added in Task 5 -->
+      <div style="display:inline-block;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 32px;margin-bottom:16px;">
+        <div style="margin-bottom:6px;"><span class="dim">$</span> <span class="cyan">/plugin marketplace add</span> stemado/otto-marketplace</div>
+        <div><span class="dim">$</span> <span class="cyan">/plugin install</span> otto@otto-marketplace</div>
+      </div>
+      <div style="margin-top:16px;font-size:0.85rem;">
+        <a href="docs/getting-started.md" style="color:var(--cyan);text-decoration:none;">Getting Started Guide</a>
+        <span class="dim" style="margin:0 8px;">&middot;</span>
+        <a href="https://github.com/stemado/otto" style="color:var(--cyan);text-decoration:none;">GitHub Repository</a>
+      </div>
     </div>
   </div>
 
