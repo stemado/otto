@@ -211,7 +211,8 @@ Otto exposes 12 tools via MCP, organized by function:
 `fill_secret` injects credentials from your `.env` file directly into form fields. The actual value never appears in the conversation -- Claude only sees a confirmation like `"chars_typed": 22`. Session history stores `${APP_PASSWORD}` references, not real values, so exported scripts are safe to commit.
 
 <p align="center">
-  <img src="assets/demo-fill-secret.gif" alt="Form fields filled without exposing credentials" width="640">
+  <img src="assets/demo-credential-security.gif" alt="Vault setup, fill_secret, and credential scrubbing in action" width="960">
+  <br><em>Credentials encrypted in vault, typed without exposure, and scrubbed from all output.</em>
 </p>
 
 ### Encrypted Credential Vault
