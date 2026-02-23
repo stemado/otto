@@ -2,7 +2,7 @@
   "mcpServers": {
     "otto": {
       "command": "uv",
-      "args": ["run", "--directory", "${CLAUDE_PLUGIN_ROOT}", "otto"]
+      "args": ["run", "--extra", "vault", "--directory", "${CLAUDE_PLUGIN_ROOT}", "otto"]
     }
   }
 }
