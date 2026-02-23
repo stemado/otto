@@ -27,7 +27,7 @@ Use this exact mapping for each action record:
 |--------|------|
 | `navigate` | `driver.get(value)` |
 | `click` | `driver.click(selector)` |
-| `type` | `driver.type(selector, value)` |
+| `type` | `human_type(driver, selector, value)` |
 | `select` | `driver.select_option(selector, value=value)` |
 | `scroll` | `driver.run_js(f"window.scrollBy(0, {amount})")` |
 | `wait` (with selector) | `driver.wait_for_element(selector, wait=timeout_seconds)` |
@@ -65,6 +65,7 @@ Setup:
     python <workflow-name>.py
 """
 import os
+import random
 import time
 from dotenv import load_dotenv
 from botasaurus_driver import Driver
@@ -95,6 +96,7 @@ Setup:
     pip install -r requirements.txt
     python <workflow-name>.py
 """
+import random
 import time
 from botasaurus_driver import Driver
 
@@ -102,14 +104,24 @@ from botasaurus_driver import Driver
 BASE_URL = "<first navigation URL>"
 ```
 
-Note: When no credentials are detected, omit `os`, `dotenv`, `load_dotenv()`, and all credential variables. Do NOT include the `cp .env.example .env` line in the docstring.
+Note: When no credentials are detected, omit `os`, `dotenv`, `load_dotenv()`, and all credential variables. Do NOT include the `cp .env.example .env` line in the docstring. Always include `import random` in both variants — it's used by `human_type()` and randomized delays.
 
 **Common script body (used by both variants):**
 
 ```python
+def human_type(driver, selector, text):
+    """Type text with randomized inter-keystroke delays to mimic human typing."""
+    elem = driver.wait_for_element(selector, wait=10)
+    elem.click()
+    for char in text:
+        elem.type(char)
+        time.sleep(random.uniform(0.03, 0.12))
+
+
 def run_workflow():
     """Replay the recorded browser workflow."""
     driver = Driver(headless=False)
+    driver.enable_human_mode()
     try:
         # Step 1: Navigate to starting page
         driver.get(BASE_URL)
@@ -131,10 +143,21 @@ Rules for the script:
 - Every step gets a **comment** explaining what it does in human terms (e.g., "Click the Login button", "Enter username")
 - Steps are **numbered sequentially** starting from 1
 - The `try/finally` block ensures the browser is always closed
-- Add `time.sleep(0.5)` between steps that trigger page navigation (where `url_changed` is true in the action record)
-- Import `time` only if sleep calls are needed
 - Only include the `USERNAME`/`PASSWORD` variables if credentials were actually detected
 - The script must be **self-contained** — runnable with `pip install -r requirements.txt && python <name>.py` from the workflow directory
+
+**Anti-detection timing — MANDATORY:**
+
+Never use fixed `time.sleep(N)` in generated scripts. All inter-step delays must be randomized:
+
+| Scenario | Delay | Why |
+|----------|-------|-----|
+| After page navigation (`url_changed` is true) | `driver.short_random_sleep()` (2-4s) | Page loads vary; fixed waits after navigation are a strong bot signal |
+| After login form submission | `driver.long_random_sleep()` (6-9s) | Login pages are the most heavily monitored for automation |
+| Between same-page interactions (clicks, typing, selects) | `time.sleep(random.uniform(0.3, 0.8))` | Humans don't click at machine speed; small jitter breaks timing fingerprints |
+| After form submission (non-login) | `driver.short_random_sleep()` (2-4s) | Server processing time varies; immediate follow-up is unnatural |
+
+The `human_type()` helper already includes per-keystroke jitter (30-120ms) so no additional delay is needed after typing steps that are immediately followed by another type action on the same form.
 
 ## Step 5b: Generate workflow JSON
 
