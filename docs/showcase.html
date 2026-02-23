@@ -682,7 +682,36 @@
     <h2 class="section-header">How it works</h2>
     <p class="section-subtitle">Six capabilities that turn a chat into a browser automation pipeline.</p>
     <div class="features-grid" id="features-grid">
-      <!-- 6 feature cards added in Task 4 -->
+      <div class="feature-card" data-demo="discovers">
+        <div class="feature-card-title">Discovers page structure for you</div>
+        <div class="feature-card-summary">Other tools require selectors upfront. Otto scouts and finds them.</div>
+        <div class="feature-card-detail"><div class="card-demo-inner" id="demo-discovers"></div></div>
+      </div>
+      <div class="feature-card" data-demo="credentials">
+        <div class="feature-card-title">Credentials never touch the conversation</div>
+        <div class="feature-card-summary">Passwords injected from encrypted vault. Never visible in chat.</div>
+        <div class="feature-card-detail"><div class="card-demo-inner" id="demo-credentials"></div></div>
+      </div>
+      <div class="feature-card" data-demo="network">
+        <div class="feature-card-title">Catches what the browser hides</div>
+        <div class="feature-card-summary">XHR calls, blob: URLs, signed download links &mdash; all intercepted.</div>
+        <div class="feature-card-detail"><div class="card-demo-inner" id="demo-network"></div></div>
+      </div>
+      <div class="feature-card" data-demo="iframes">
+        <div class="feature-card-title">Works through iframes and shadow DOM</div>
+        <div class="feature-card-summary">Triple-nested iframes? Shadow DOM? Otto pierces all of it.</div>
+        <div class="feature-card-detail"><div class="card-demo-inner" id="demo-iframes"></div></div>
+      </div>
+      <div class="feature-card" data-demo="antidetect">
+        <div class="feature-card-title">Passes bot detection</div>
+        <div class="feature-card-summary">Botasaurus handles fingerprint evasion automatically.</div>
+        <div class="feature-card-detail"><div class="card-demo-inner" id="demo-antidetect"></div></div>
+      </div>
+      <div class="feature-card" data-demo="export">
+        <div class="feature-card-title">Exports standalone scripts</div>
+        <div class="feature-card-summary">Run it again without Claude. Complete workflow package.</div>
+        <div class="feature-card-detail"><div class="card-demo-inner" id="demo-export"></div></div>
+      </div>
     </div>
   </div>
 
@@ -1057,6 +1086,152 @@ document.getElementById('replay-btn').addEventListener('click', () => {
 
 // Auto-play on load
 setTimeout(playHero, 600);
+
+/* ══════════════════════════════════════════════════════════════
+   CARD DEMO SCENES — Mini-demos for each feature card
+   ══════════════════════════════════════════════════════════════ */
+
+const cardDemos = {
+  discovers: {
+    target: '#demo-discovers',
+    scene: [
+      { type: 'appendLine', target: '#demo-discovers', html: toolBox('scout_page_tool', [
+        { key: 'page', val: 'Employee Benefits Portal', valClass: 'str' },
+        { key: 'iframes', val: '2' },
+        { raw: '<div class="tool-row"><span class="dim" style="padding-left:128px;">depth 0: </span><span class="str">portal.corp.com</span></div>' },
+        { raw: '<div class="tool-row"><span class="dim" style="padding-left:128px;">depth 1: </span><span class="str">vendor-sso.okta.com</span> <span class="yellow">\u26a0 cross-origin</span></div>' },
+        { key: 'elements', val: 'a: 12, input: 3, button: 2, select: 1' },
+      ], '<span class="dim">~200 tokens \u2014 not 50,000</span>') },
+      { type: 'sleep', ms: 800 },
+      { type: 'appendLine', target: '#demo-discovers', html: '<span class="yellow">Other tools: "provide your CSS selectors."</span>' },
+      { type: 'appendLine', target: '#demo-discovers', html: '<span class="ok">Otto: "I found them for you."</span>' },
+    ]
+  },
+
+  credentials: {
+    target: '#demo-credentials',
+    scene: [
+      { type: 'appendLine', target: '#demo-credentials', html: toolBox('fill_secret', [
+        { key: 'env_var', val: '"LOGIN_PASSWORD"', valClass: 'str' },
+        { key: 'chars_typed', val: '14' },
+        { key: 'source', val: 'vault (encrypted)', valClass: 'str' },
+      ], '<span class="yellow">Password value: never in conversation</span>') },
+      { type: 'sleep', ms: 600 },
+      { type: 'appendLine', target: '#demo-credentials', html: '<span class="dim">scout shows: </span><span class="key">value=</span><span class="redacted">[REDACTED]</span>' },
+      { type: 'sleep', ms: 400 },
+      { type: 'appendLine', target: '#demo-credentials', html: '<span class="dim">history shows: </span><span class="yellow">${LOGIN_PASSWORD}</span>' },
+    ]
+  },
+
+  network: {
+    target: '#demo-network',
+    scene: [
+      { type: 'appendLine', target: '#demo-network', html: toolBox('monitor_network \u2014 query', [
+        { raw: '<div class="tool-row"><span class="cyan">GET</span> <span class="str">blob:https://streaming.corp.com/a1b2</span> <span class="dim">\u2192</span></div>' },
+        { raw: '<div class="tool-row"><span class="dim" style="padding-left:32px;">real: </span><span class="str">https://cdn.corp.com/stream/master.m3u8</span> <span class="dim">2.1 KB</span></div>' },
+        { raw: '<div class="tool-row"><span class="dim" style="padding-left:32px;">real: </span><span class="str">https://cdn.corp.com/stream/seg-001.ts</span> <span class="dim">1.2 MB</span></div>' },
+        { raw: '<div class="tool-row"><span class="dim" style="padding-left:32px;">real: </span><span class="str">https://cdn.corp.com/stream/seg-002.ts</span> <span class="dim">1.1 MB</span></div>' },
+      ], '<span class="ok">\u2713 Real URLs captured behind blob: facade</span>') },
+    ]
+  },
+
+  iframes: {
+    target: '#demo-iframes',
+    scene: [
+      { type: 'appendLine', target: '#demo-iframes', html: toolBox('scout_page_tool', [
+        { raw: '<div class="tool-row"><span class="dim">depth 0: </span><span class="str">portal.megacorp.com</span></div>' },
+        { raw: '<div class="tool-row"><span class="dim" style="padding-left:20px;">depth 1: </span><span class="str">vendor-auth.okta.com</span></div>' },
+        { raw: '<div class="tool-row"><span class="dim" style="padding-left:40px;">depth 2: </span><span class="str">sso.provider.io</span> <span class="yellow">\u26a0 cross-origin</span></div>' },
+        { raw: '<div class="tool-row"><span class="dim" style="padding-left:60px;">shadow-root: </span><span class="cyan">login-form &gt;&gt;&gt; input#email</span></div>' },
+      ]) },
+      { type: 'sleep', ms: 600 },
+      { type: 'appendLine', target: '#demo-iframes', html: toolBox('find_elements', [
+        { raw: '<div class="tool-row"><span class="cyan">input#email</span> <span class="dim">frame: sso.provider.io | shadow: login-form</span></div>' },
+        { raw: '<div class="tool-row"><span class="cyan">input#password</span> <span class="dim">frame: sso.provider.io | shadow: login-form</span></div>' },
+      ], '<span class="ok">\u2713 Found through 3 iframes + shadow DOM</span>') },
+    ]
+  },
+
+  antidetect: {
+    target: '#demo-antidetect',
+    scene: [
+      { type: 'appendLine', target: '#demo-antidetect', html: '<div style="display:flex;gap:16px;font-size:0.85rem;">' +
+        '<div style="flex:1;border:1px solid var(--border);border-radius:6px;padding:10px 14px;background:rgba(13,17,23,0.4);">' +
+          '<div class="dim" style="font-weight:600;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border);">Playwright</div>' +
+          '<div><span class="ok">\u2713</span> <span class="dim">User Agent</span></div>' +
+          '<div><span class="red">\u2717</span> <span class="red">WebDriver</span></div>' +
+          '<div><span class="red">\u2717</span> <span class="red">Chrome.app</span></div>' +
+          '<div><span class="red">\u2717</span> <span class="red">Permissions</span></div>' +
+          '<div class="dim" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">48/51 passed</div>' +
+        '</div>' +
+        '<div style="flex:1;border:1px solid var(--border);border-radius:6px;padding:10px 14px;background:rgba(13,17,23,0.4);">' +
+          '<div class="ok" style="font-weight:600;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border);">Otto (Botasaurus)</div>' +
+          '<div><span class="ok">\u2713</span> <span class="ok">User Agent</span></div>' +
+          '<div><span class="ok">\u2713</span> <span class="ok">WebDriver</span></div>' +
+          '<div><span class="ok">\u2713</span> <span class="ok">Chrome.app</span></div>' +
+          '<div><span class="ok">\u2713</span> <span class="ok">Permissions</span></div>' +
+          '<div class="ok" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">51/51 passed</div>' +
+        '</div>' +
+      '</div>' },
+      { type: 'sleep', ms: 500 },
+      { type: 'appendLine', target: '#demo-antidetect', html: '<span class="dim">Anti-detection is automatic. No configuration needed.</span>' },
+    ]
+  },
+
+  export: {
+    target: '#demo-export',
+    scene: [
+      { type: 'appendLine', target: '#demo-export', html: toolBox('/export-workflow portal-report', [
+        { raw: '<div class="sim-file-tree" style="padding:4px 0;">' +
+            '<div class="dir">portal-report/</div>' +
+            '<div class="file">run.py <span class="dim">\u2014 standalone script, numbered steps</span></div>' +
+            '<div class="file">workflow.json <span class="dim">\u2014 portable definition</span></div>' +
+            '<div class="file">requirements.txt <span class="dim">\u2014 botasaurus-driver</span></div>' +
+            '<div class="file">.env.example <span class="dim">\u2014 PORTAL_PASSWORD=</span></div>' +
+          '</div>' },
+      ], '<span class="ok">\u2713 Credentials parameterized \u2014 safe to commit</span>') },
+    ]
+  },
+};
+
+/* ══════════════════════════════════════════════════════════════
+   ACCORDION WIRING — Click to expand/collapse feature cards
+   ══════════════════════════════════════════════════════════════ */
+
+const cardEngines = {};
+
+document.querySelectorAll('.feature-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const demoId = card.dataset.demo;
+    const wasActive = card.classList.contains('active');
+
+    // Close all cards, stop all engines
+    document.querySelectorAll('.feature-card').forEach(c => {
+      c.classList.remove('active');
+      const id = c.dataset.demo;
+      if (cardEngines[id]) cardEngines[id].stop();
+    });
+
+    if (wasActive) return; // collapsed
+
+    // Expand this card
+    card.classList.add('active');
+    const demo = cardDemos[demoId];
+    if (!demo) return;
+
+    // Clear previous demo content
+    const container = document.querySelector(demo.target);
+    if (container) container.innerHTML = '';
+
+    // Play mini-demo
+    const demoEngine = new AnimationEngine();
+    cardEngines[demoId] = demoEngine;
+    demoEngine.play(demo.scene);
+
+    // Scroll into view
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+});
 </script>
 </body>
 </html>
