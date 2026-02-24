@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Otto — The Universal Adapter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #080b14;
+    --surface: #111827;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --dim: #334155;
+    --otto: #f97316;
+    --otto-glow: rgba(249, 115, 22, 0.15);
+    --legacy: #64748b;
+    --legacy-active: #94a3b8;
+    --modern: #38bdf8;
+    --modern-glow: rgba(56, 189, 248, 0.12);
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --sans: 'DM Sans', -apple-system, sans-serif;
+    --connector: #475569;
+    --flow: var(--otto);
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+  }
+
+  /* ── Atmosphere ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 45%, rgba(249, 115, 22, 0.03) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 20% 50%, rgba(56, 189, 248, 0.02) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 80% 50%, rgba(100, 116, 139, 0.02) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ══════════════════════════════════════════
+     LAYOUT
+     ══════════════════════════════════════════ */
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 32px 48px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ── Back link ── */
+  .back-link {
+    position: fixed;
+    top: 24px;
+    left: 32px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-family: var(--sans);
+    z-index: 10;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--text); }
+
+  /* ── Title area ── */
+  .title-area {
+    text-align: center;
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.2s forwards;
+  }
+  .title-logo {
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .title-main {
+    font-family: var(--serif);
+    font-size: 2rem;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .title-main em {
+    color: var(--otto);
+    font-style: italic;
+  }
+
+  /* ══════════════════════════════════════════
+     THE STAGE — Central diagram area
+     ══════════════════════════════════════════ */
+  .stage {
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    height: 340px;
+    flex-shrink: 0;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.5s forwards;
+  }
+
+  /* ── System nodes ── */
+  .node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .node-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .node-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-align: center;
+    white-space: nowrap;
+    transition: all 0.6s ease;
+  }
+
+  /* Legacy nodes (left side) */
+  .node.legacy { opacity: 0; transform: translateX(-20px); }
+  .node.legacy .node-icon { border-color: var(--dim); }
+
+  .node.legacy.active {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .node.legacy.active .node-icon {
+    border-color: var(--legacy-active);
+    box-shadow: 0 0 20px rgba(148, 163, 184, 0.08);
+  }
+  .node.legacy.active .node-label { color: var(--legacy-active); }
+
+  /* Legacy glitch state (Phase IV) */
+  .node.legacy.glitch .node-icon {
+    animation: glitchShake 0.6s ease 0s 3;
+    border-color: var(--red);
+    box-shadow: 0 0 24px rgba(248, 113, 113, 0.15);
+  }
+  .node.legacy.glitch .node-label { color: var(--red); }
+
+  .node.legacy.repaired .node-icon {
+    border-color: var(--green);
+    box-shadow: 0 0 20px rgba(52, 211, 153, 0.12);
+    animation: none;
+  }
+  .node.legacy.repaired .node-label { color: var(--green); }
+
+  /* Modern nodes (right side) */
+  .node.modern { opacity: 0; transform: translateX(20px); }
+  .node.modern .node-icon { border-color: var(--dim); }
+
+  .node.modern.active {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .node.modern.active .node-icon {
+    border-color: var(--modern);
+    box-shadow: 0 0 20px var(--modern-glow);
+  }
+  .node.modern.active .node-label { color: var(--modern); }
+
+  /* ── Otto hub (center) ── */
+  .otto-hub {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .otto-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    border: 2px solid var(--otto);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--sans);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--otto);
+    letter-spacing: 1px;
+    box-shadow: 0 0 40px var(--otto-glow);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  /* Pulsing ring behind Otto */
+  .otto-icon::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 24px;
+    border: 1px solid var(--otto);
+    opacity: 0;
+    animation: ottoPulse 3s ease-in-out infinite;
+  }
+
+  .otto-sub {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    transition: all 0.6s ease;
+  }
+
+  /* Otto grows in Phase III */
+  .stage.phase-3 .otto-icon,
+  .stage.phase-4 .otto-icon {
+    width: 90px;
+    height: 90px;
+    border-radius: 22px;
+    font-size: 0.85rem;
+  }
+  .stage.phase-3 .otto-sub,
+  .stage.phase-4 .otto-sub {
+    color: var(--otto);
+    font-size: 0.7rem;
+  }
+
+  /* ── SVG Connectors ── */
+  .connectors {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .connectors svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .connector-line {
+    fill: none;
+    stroke: var(--connector);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+    opacity: 0;
+    transition: opacity 0.6s ease, stroke 0.6s ease;
+  }
+  .connector-line.active {
+    opacity: 1;
+  }
+  .connector-line.flowing {
+    stroke: var(--otto);
+    stroke-dashoffset: 0;
+    animation: flowDash 1.5s linear infinite;
+  }
+  .connector-line.glitch {
+    stroke: var(--red);
+    animation: flowDash 0.4s linear infinite;
+  }
+  .connector-line.repaired {
+    stroke: var(--green);
+    animation: flowDash 1.5s linear infinite;
+  }
+
+  /* Data flow dots along connectors */
+  .flow-dot {
+    fill: var(--otto);
+    opacity: 0;
+    r: 3;
+    transition: opacity 0.4s ease;
+  }
+  .flow-dot.active {
+    opacity: 1;
+  }
+
+  /* ── User/Schedule icon (right-side context) ── */
+  .context-icon {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.6s ease;
+    opacity: 0;
+  }
+  .context-icon.active { opacity: 1; }
+  .context-icon .ctx-symbol {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1.5px solid var(--dim);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    transition: all 0.6s ease;
+  }
+  .context-icon.active .ctx-symbol {
+    border-color: var(--muted);
+  }
+  .context-icon .ctx-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  /* ══════════════════════════════════════════
+     CAPTION AREA
+     ══════════════════════════════════════════ */
+  .caption-area {
+    text-align: center;
+    margin-top: 24px;
+    min-height: 120px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.8s forwards;
+  }
+
+  .phase-label {
+    font-family: var(--sans);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--otto);
+    margin-bottom: 10px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .phase-label.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .headline {
+    font-family: var(--serif);
+    font-size: 1.8rem;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.3;
+    margin-bottom: 12px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.6s ease 0.1s, transform 0.6s ease 0.1s;
+  }
+  .headline.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .subcaption {
+    font-size: 0.9rem;
+    font-weight: 300;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 560px;
+    margin: 0 auto;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.5s ease 0.25s, transform 0.5s ease 0.25s;
+  }
+  .subcaption.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ══════════════════════════════════════════
+     PHASE DOTS
+     ══════════════════════════════════════════ */
+  .phase-dots {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 28px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 1s forwards;
+  }
+  .phase-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid var(--dim);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    position: relative;
+  }
+  .phase-dot:hover { border-color: var(--muted); }
+  .phase-dot.active {
+    border-color: var(--otto);
+    background: var(--otto);
+    box-shadow: 0 0 10px var(--otto-glow);
+  }
+  .phase-dot.completed {
+    border-color: var(--green);
+    background: var(--green);
+  }
+  .phase-dot-label {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.55rem;
+    color: var(--dim);
+    white-space: nowrap;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.3s ease;
+  }
+  .phase-dot.active .phase-dot-label { color: var(--otto); }
+  .phase-dot.completed .phase-dot-label { color: var(--green); }
+
+  /* ── Replay button ── */
+  .replay-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 16px;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 10;
+  }
+  .replay-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .replay-btn:hover {
+    border-color: var(--otto);
+    color: var(--otto);
+  }
+
+  /* ══════════════════════════════════════════
+     KEYFRAMES
+     ══════════════════════════════════════════ */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes ottoPulse {
+    0%, 100% { opacity: 0; transform: scale(1); }
+    50% { opacity: 0.2; transform: scale(1.08); }
+  }
+
+  @keyframes flowDash {
+    to { stroke-dashoffset: -20; }
+  }
+
+  @keyframes glitchShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-3px) rotate(-1deg); }
+    40% { transform: translateX(3px) rotate(1deg); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+  }
+
+  @keyframes dotTravel {
+    0% { offset-distance: 0%; opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { offset-distance: 100%; opacity: 0; }
+  }
+
+  /* ══════════════════════════════════════════
+     RESPONSIVE
+     ══════════════════════════════════════════ */
+  @media (max-width: 768px) {
+    .container { padding: 24px 20px; }
+    .title-main { font-size: 1.5rem; }
+    .headline { font-size: 1.4rem; }
+    .stage { height: 280px; }
+    .node-icon { width: 50px; height: 50px; font-size: 1.2rem; border-radius: 12px; }
+    .otto-icon { width: 64px; height: 64px; font-size: 0.9rem; }
+    .node-label { font-size: 0.6rem; }
+    .context-icon .ctx-symbol { width: 40px; height: 40px; font-size: 1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<a class="back-link" href="phase-theater.html">&larr; Technical Demo</a>
+<button class="replay-btn" id="replay-btn">&#8635; Watch Again</button>
+
+<div class="container">
+
+  <!-- Title -->
+  <div class="title-area">
+    <div class="title-logo">Otto</div>
+    <h1 class="title-main">The <em>Universal Adapter</em> for Legacy Systems</h1>
+  </div>
+
+  <!-- Stage -->
+  <div class="stage" id="stage">
+
+    <!-- SVG Connectors Layer -->
+    <div class="connectors">
+      <svg viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet">
+        <!-- Legacy → Otto connectors -->
+        <path id="conn-l1" class="connector-line" d="M 170,170 C 280,170 320,170 400,170" />
+        <path id="conn-l2" class="connector-line" d="M 170,90 C 260,90 320,130 400,155" />
+        <path id="conn-l3" class="connector-line" d="M 170,250 C 260,250 320,210 400,185" />
+
+        <!-- Otto → Modern connectors -->
+        <path id="conn-r1" class="connector-line" d="M 560,170 C 650,170 680,170 790,170" />
+        <path id="conn-r2" class="connector-line" d="M 560,155 C 650,130 700,90 790,90" />
+        <path id="conn-r3" class="connector-line" d="M 560,185 C 650,210 700,250 790,250" />
+
+        <!-- Animated flow dots -->
+        <circle class="flow-dot" id="dot-l1"><animateMotion dur="2s" repeatCount="indefinite" path="M 170,170 C 280,170 320,170 400,170" /></circle>
+        <circle class="flow-dot" id="dot-l2"><animateMotion dur="2.3s" repeatCount="indefinite" path="M 170,90 C 260,90 320,130 400,155" /></circle>
+        <circle class="flow-dot" id="dot-l3"><animateMotion dur="2.1s" repeatCount="indefinite" path="M 170,250 C 260,250 320,210 400,185" /></circle>
+
+        <circle class="flow-dot" id="dot-r1"><animateMotion dur="1.8s" repeatCount="indefinite" path="M 560,170 C 650,170 680,170 790,170" /></circle>
+        <circle class="flow-dot" id="dot-r2"><animateMotion dur="2.2s" repeatCount="indefinite" path="M 560,155 C 650,130 700,90 790,90" /></circle>
+        <circle class="flow-dot" id="dot-r3"><animateMotion dur="2s" repeatCount="indefinite" path="M 560,185 C 650,210 700,250 790,250" /></circle>
+      </svg>
+    </div>
+
+    <!-- Legacy Systems (left) -->
+    <div class="node legacy" id="legacy-1" style="left: 80px; top: 50%;">
+      <div class="node-icon">&#127970;</div>
+      <div class="node-label">HR Portal</div>
+    </div>
+    <div class="node legacy" id="legacy-2" style="left: 80px; top: 14%;">
+      <div class="node-icon">&#128230;</div>
+      <div class="node-label">Vendor Dashboard</div>
+    </div>
+    <div class="node legacy" id="legacy-3" style="left: 80px; top: 86%;">
+      <div class="node-icon">&#128203;</div>
+      <div class="node-label">Benefits Platform</div>
+    </div>
+
+    <!-- Otto Hub (center) -->
+    <div class="otto-hub">
+      <div class="otto-icon" id="otto-icon">Otto</div>
+      <div class="otto-sub" id="otto-sub">adapter</div>
+    </div>
+
+    <!-- Modern Systems (right) -->
+    <div class="node modern" id="modern-1" style="right: 80px; top: 50%;">
+      <div class="node-icon">&#9881;</div>
+      <div class="node-label">ERP System</div>
+    </div>
+    <div class="node modern" id="modern-2" style="right: 80px; top: 14%;">
+      <div class="node-icon">&#128176;</div>
+      <div class="node-label">Payroll</div>
+    </div>
+    <div class="node modern" id="modern-3" style="right: 80px; top: 86%;">
+      <div class="node-icon">&#128187;</div>
+      <div class="node-label">Custom App</div>
+    </div>
+
+    <!-- Context icons (user, schedule) -->
+    <div class="context-icon" id="ctx-user" style="right: 28px; top: 50%;">
+      <div class="ctx-symbol">&#128100;</div>
+      <div class="ctx-label">You</div>
+    </div>
+    <div class="context-icon" id="ctx-schedule" style="right: 28px; top: 50%;">
+      <div class="ctx-symbol">&#128337;</div>
+      <div class="ctx-label">Schedule</div>
+    </div>
+  </div>
+
+  <!-- Captions -->
+  <div class="caption-area">
+    <div class="phase-label" id="phase-label"></div>
+    <div class="headline" id="headline"></div>
+    <div class="subcaption" id="subcaption"></div>
+  </div>
+
+  <!-- Phase dots -->
+  <div class="phase-dots" id="phase-dots">
+    <div class="phase-dot" data-phase="0">
+      <span class="phase-dot-label">I</span>
+    </div>
+    <div class="phase-dot" data-phase="1">
+      <span class="phase-dot-label">II</span>
+    </div>
+    <div class="phase-dot" data-phase="2">
+      <span class="phase-dot-label">III</span>
+    </div>
+    <div class="phase-dot" data-phase="3">
+      <span class="phase-dot-label">IV</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PHASE DEFINITIONS
+   ══════════════════════════════════════════════════════════════ */
+
+const phaseData = [
+  {
+    label: 'Phase I — Plugin',
+    headline: 'Otto learns your portal.',
+    subcaption: 'You describe the task. Otto navigates the portal, handles the login, and brings back the data. Like a universal travel adapter — one tool that fits any outlet.',
+    legacy: [0],        // which legacy nodes are active (index)
+    modern: [],
+    connectors: { left: [0], right: [] },
+    dots: { left: [0], right: [] },
+    ctx: 'user',
+    ottoSub: 'adapter',
+  },
+  {
+    label: 'Phase II — Workflows',
+    headline: 'Now it runs without you.',
+    subcaption: 'Set a schedule. Otto runs the same workflow automatically — every day, every week, whenever you need. If something breaks, Otto fixes it.',
+    legacy: [0],
+    modern: [],
+    connectors: { left: [0], right: [] },
+    dots: { left: [0], right: [] },
+    ctx: 'schedule',
+    ottoSub: 'engine',
+    flowClass: 'flowing',
+  },
+  {
+    label: 'Phase III — Hosted API',
+    headline: 'Every system gets an API.',
+    subcaption: 'Other systems call Otto directly. They get clean data back — never knowing a browser was involved. Otto becomes the API that legacy systems never built.',
+    legacy: [0, 1, 2],
+    modern: [0, 1, 2],
+    connectors: { left: [0, 1, 2], right: [0, 1, 2] },
+    dots: { left: [0, 1, 2], right: [0, 1, 2] },
+    ctx: null,
+    ottoSub: 'api',
+    flowClass: 'flowing',
+  },
+  {
+    label: 'Phase IV — Adaptive Intelligence',
+    headline: 'Portals change. Otto adapts.',
+    subcaption: 'When a portal updates its interface, Otto detects the change and adapts automatically. Nothing breaks downstream. 1,000 portals. Zero engineers on call.',
+    legacy: [0, 1, 2],
+    modern: [0, 1, 2],
+    connectors: { left: [0, 1, 2], right: [0, 1, 2] },
+    dots: { left: [0, 1, 2], right: [0, 1, 2] },
+    ctx: null,
+    ottoSub: 'intelligence',
+    flowClass: 'flowing',
+    glitchNode: 1,      // legacy-2 glitches
+  },
+];
+
+/* ══════════════════════════════════════════════════════════════
+   CONTROLLER
+   ══════════════════════════════════════════════════════════════ */
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+const legacyNodes = [
+  document.getElementById('legacy-1'),
+  document.getElementById('legacy-2'),
+  document.getElementById('legacy-3'),
+];
+const modernNodes = [
+  document.getElementById('modern-1'),
+  document.getElementById('modern-2'),
+  document.getElementById('modern-3'),
+];
+const connLeft = [
+  document.getElementById('conn-l1'),
+  document.getElementById('conn-l2'),
+  document.getElementById('conn-l3'),
+];
+const connRight = [
+  document.getElementById('conn-r1'),
+  document.getElementById('conn-r2'),
+  document.getElementById('conn-r3'),
+];
+const dotsLeft = [
+  document.getElementById('dot-l1'),
+  document.getElementById('dot-l2'),
+  document.getElementById('dot-l3'),
+];
+const dotsRight = [
+  document.getElementById('dot-r1'),
+  document.getElementById('dot-r2'),
+  document.getElementById('dot-r3'),
+];
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+let currentPhase = -1;
+let playing = false;
+let autoTimer = null;
+
+function clearPhaseVisuals() {
+  // Reset all nodes
+  legacyNodes.forEach(n => {
+    n.classList.remove('active', 'glitch', 'repaired');
+    // Reset transform for vertical centering
+    n.style.transform = '';
+  });
+  modernNodes.forEach(n => n.classList.remove('active'));
+
+  // Reset connectors
+  [...connLeft, ...connRight].forEach(c => {
+    c.classList.remove('active', 'flowing', 'glitch', 'repaired');
+  });
+
+  // Reset dots
+  [...dotsLeft, ...dotsRight].forEach(d => d.classList.remove('active'));
+
+  // Reset context icons
+  $('#ctx-user').classList.remove('active');
+  $('#ctx-schedule').classList.remove('active');
+
+  // Reset captions
+  $('#phase-label').classList.remove('active');
+  $('#headline').classList.remove('active');
+  $('#subcaption').classList.remove('active');
+
+  // Reset stage phase class
+  const stage = $('#stage');
+  stage.className = 'stage';
+}
+
+async function showPhase(index, animate = true) {
+  const phase = phaseData[index];
+  currentPhase = index;
+
+  // Clear everything
+  clearPhaseVisuals();
+
+  // Add stage phase class
+  $('#stage').classList.add(`phase-${index + 1}`);
+
+  // Update phase dots
+  $$('.phase-dot').forEach((dot, i) => {
+    dot.classList.remove('active', 'completed');
+    if (i === index) dot.classList.add('active');
+    else if (i < index) dot.classList.add('completed');
+  });
+
+  if (animate) await wait(200);
+
+  // Show caption
+  $('#phase-label').textContent = phase.label;
+  $('#headline').textContent = phase.headline;
+  $('#subcaption').textContent = phase.subcaption;
+
+  $('#phase-label').classList.add('active');
+  if (animate) await wait(100);
+  $('#headline').classList.add('active');
+  if (animate) await wait(100);
+  $('#subcaption').classList.add('active');
+
+  if (animate) await wait(300);
+
+  // Otto sub-label
+  $('#otto-sub').textContent = phase.ottoSub;
+
+  // Activate legacy nodes
+  for (const i of phase.legacy) {
+    legacyNodes[i].classList.add('active');
+    if (animate) await wait(150);
+  }
+
+  // Activate connectors (left)
+  for (const i of phase.connectors.left) {
+    connLeft[i].classList.add('active');
+    if (phase.flowClass) connLeft[i].classList.add(phase.flowClass);
+    if (animate) await wait(100);
+  }
+
+  // Activate flow dots (left)
+  for (const i of phase.dots.left) {
+    dotsLeft[i].classList.add('active');
+  }
+
+  // Activate connectors (right)
+  for (const i of phase.connectors.right) {
+    connRight[i].classList.add('active');
+    if (phase.flowClass) connRight[i].classList.add(phase.flowClass);
+    if (animate) await wait(100);
+  }
+
+  // Activate flow dots (right)
+  for (const i of phase.dots.right) {
+    dotsRight[i].classList.add('active');
+  }
+
+  // Activate modern nodes
+  for (const i of phase.modern) {
+    modernNodes[i].classList.add('active');
+    if (animate) await wait(150);
+  }
+
+  // Context icon
+  if (phase.ctx === 'user') {
+    $('#ctx-user').classList.add('active');
+  } else if (phase.ctx === 'schedule') {
+    $('#ctx-schedule').classList.add('active');
+  }
+
+  // Phase IV: glitch sequence
+  if (phase.glitchNode !== undefined && animate) {
+    await wait(1500);
+    const gi = phase.glitchNode;
+    legacyNodes[gi].classList.add('glitch');
+    connLeft[gi].classList.add('glitch');
+    connLeft[gi].classList.remove('flowing');
+
+    await wait(2000);
+
+    legacyNodes[gi].classList.remove('glitch');
+    legacyNodes[gi].classList.add('repaired');
+    connLeft[gi].classList.remove('glitch');
+    connLeft[gi].classList.add('repaired');
+  }
+}
+
+async function playAll() {
+  playing = true;
+  $('#replay-btn').classList.remove('visible');
+
+  for (let i = 0; i < phaseData.length; i++) {
+    if (!playing) return;
+    await showPhase(i, true);
+    if (!playing) return;
+
+    // Wait before next phase (longer for phase IV glitch)
+    const delay = i === 3 ? 3000 : 5500;
+    await wait(delay);
+  }
+
+  playing = false;
+  $('#replay-btn').classList.add('visible');
+}
+
+function jumpToPhase(index) {
+  playing = false;
+  showPhase(index, true);
+}
+
+// Wire phase dots
+$$('.phase-dot').forEach((dot, i) => {
+  dot.addEventListener('click', () => jumpToPhase(i));
+});
+
+// Wire replay
+$('#replay-btn').addEventListener('click', () => {
+  playing = false;
+  setTimeout(() => playAll(), 100);
+});
+
+// Auto-play on load
+setTimeout(() => playAll(), 1200);
+</script>
+</body>
+</html>
