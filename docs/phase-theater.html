@@ -1524,6 +1524,12 @@ const phases = [
    PHASE CONTROLLER
    ══════════════════════════════════════════════════════════════ */
 
+// Plain sleep — no engine state checks, just a timer.
+// Used for controller transitions (fade stage, pause between phases).
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const controller = {
   engine: new AnimationEngine(),
   current: -1,
@@ -1541,7 +1547,7 @@ const controller = {
       await this.playPhase(i);
       if (!this.playing) return;
       // Pause between phases
-      try { await this.engine.sleep(1800); } catch(e) { return; }
+      await wait(1800);
     }
 
     // Architecture capstone
@@ -1562,7 +1568,7 @@ const controller = {
     // Fade out stage
     stage.style.transition = 'opacity 0.25s ease';
     stage.style.opacity = '0';
-    try { await this.engine.sleep(260); } catch(e) { return; }
+    await wait(260);
     if (!this.playing && !this._jumping) return;
 
     // Swap content
@@ -1579,7 +1585,8 @@ const controller = {
     // Fade in stage
     stage.offsetHeight;
     stage.style.opacity = '1';
-    try { await this.engine.sleep(300); } catch(e) { return; }
+    await wait(300);
+    if (!this.playing && !this._jumping) return;
 
     // Play scene
     await this.engine.play(phase.scene);
@@ -1613,7 +1620,7 @@ const controller = {
     // Scroll into view
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    try { await this.engine.sleep(400); } catch(e) { return; }
+    await wait(400);
 
     // Animate layers top to bottom
     const layers = section.querySelectorAll('.arch-layer');
@@ -1624,10 +1631,10 @@ const controller = {
       layers[i].classList.add('visible');
       // Show connector below (if exists)
       if (connectors[i]) {
-        try { await this.engine.sleep(150); } catch(e) { return; }
+        await wait(150);
         connectors[i].classList.add('visible');
       }
-      try { await this.engine.sleep(250); } catch(e) { return; }
+      await wait(250);
     }
   },
 
