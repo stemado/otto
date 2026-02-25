@@ -20,6 +20,12 @@
   <!-- Non-submit button for testing click warning differentiation -->
   <button id="noop-btn">Do Nothing</button>
 
+  <!-- Checkbox/radio for click fingerprint false-positive tests -->
+  <input type="checkbox" id="agree-cb" />
+  <input type="radio" name="choice" id="radio-a" value="a" />
+  <input type="radio" name="choice" id="radio-b" value="b" checked />
+  <input type="checkbox" id="disabled-cb" disabled />
+
   <script>
     // Track form submission
     document.getElementById('test-form').addEventListener('submit', function(e) {
