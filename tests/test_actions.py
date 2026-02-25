@@ -85,6 +85,102 @@ def test_type_fills_input(session):
 
 
 # ---------------------------------------------------------------------------
+# execute_action — type (constrained HTML5 inputs)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def form_session(base_url):
+    """Browser session pointed at the form test fixture."""
+    s = BrowserSession(headless=True)
+    s.launch(base_url + "/form_test.html")
+    yield s
+    s.close()
+
+
+@pytest.fixture(autouse=False)
+def reset_form_page(form_session, base_url):
+    """Reset to form_test.html before each form test."""
+    form_session.driver.get(base_url + "/form_test.html")
+
+
+def test_type_date_input(form_session, reset_form_page):
+    """Type action on input[type=date] sets value via JS injection."""
+    result, _ = execute_action(form_session.driver, "type", "#date", "2026-03-15", wait_after=0)
+    assert result.success is True
+
+    js_result, _ = run_javascript(form_session.driver, "document.getElementById('date').value")
+    assert js_result.result == "2026-03-15"
+
+
+def test_type_time_input(form_session, reset_form_page):
+    """Type action on input[type=time] sets value via JS injection."""
+    result, _ = execute_action(form_session.driver, "type", "#time", "11:45", wait_after=0)
+    assert result.success is True
+
+    js_result, _ = run_javascript(form_session.driver, "document.getElementById('time').value")
+    assert js_result.result == "11:45"
+
+
+def test_type_datetime_local_input(form_session, reset_form_page):
+    """Type action on input[type=datetime-local] sets value via JS injection."""
+    result, _ = execute_action(
+        form_session.driver, "type", "#datetime", "2026-03-15T11:45", wait_after=0
+    )
+    assert result.success is True
+
+    js_result, _ = run_javascript(
+        form_session.driver, "document.getElementById('datetime').value"
+    )
+    assert js_result.result == "2026-03-15T11:45"
+
+
+def test_type_month_input(form_session, reset_form_page):
+    """Type action on input[type=month] sets value via JS injection."""
+    result, _ = execute_action(form_session.driver, "type", "#month", "2026-03", wait_after=0)
+    assert result.success is True
+
+    js_result, _ = run_javascript(form_session.driver, "document.getElementById('month').value")
+    assert js_result.result == "2026-03"
+
+
+def test_type_week_input(form_session, reset_form_page):
+    """Type action on input[type=week] sets value via JS injection."""
+    result, _ = execute_action(form_session.driver, "type", "#week", "2026-W12", wait_after=0)
+    assert result.success is True
+
+    js_result, _ = run_javascript(form_session.driver, "document.getElementById('week').value")
+    assert js_result.result == "2026-W12"
+
+
+def test_type_text_still_uses_keystrokes(form_session, reset_form_page):
+    """Type on a regular text input still uses keystroke simulation (no regression)."""
+    result, _ = execute_action(form_session.driver, "type", "#name", "Otto", wait_after=0)
+    assert result.success is True
+    # action_performed should say "Typed into" (keystrokes), not "Set value on" (injection)
+    assert "Typed into" in result.action_performed
+
+    js_result, _ = run_javascript(form_session.driver, "document.getElementById('name').value")
+    assert js_result.result == "Otto"
+
+
+def test_type_constrained_reports_injection(form_session, reset_form_page):
+    """Constrained input type action reports it used value injection."""
+    result, _ = execute_action(form_session.driver, "type", "#time", "14:30", wait_after=0)
+    assert result.success is True
+    assert "value injection" in result.action_performed.lower()
+
+
+def test_type_constrained_dispatches_events(form_session, reset_form_page):
+    """Constrained input injection dispatches input and change events."""
+    execute_action(form_session.driver, "type", "#time", "09:00", wait_after=0)
+
+    js_result, _ = run_javascript(form_session.driver, "document.getElementById('events').textContent")
+    assert "time:input" in js_result.result
+    assert "time:change" in js_result.result
+
+
+# ---------------------------------------------------------------------------
 # execute_action — select
 # ---------------------------------------------------------------------------
 
