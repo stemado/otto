@@ -317,6 +317,164 @@ def _capture_dom_fingerprint(driver: Driver) -> dict | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# CDP-direct JavaScript evaluation helpers
+# ---------------------------------------------------------------------------
+# Botasaurus-driver's run_js wraps scripts in block bodies that require
+# explicit 'return' statements.  These helpers bypass that wrapping and use
+# CDP Runtime.evaluate directly so bare expressions (e.g. "document.title")
+# return their value naturally.
+# ---------------------------------------------------------------------------
+
+
+def _extract_exception_text(exception_details) -> str:
+    """Extract a human-readable error message from CDP ExceptionDetails."""
+    if exception_details.exception and exception_details.exception.description:
+        return exception_details.exception.description
+    return exception_details.text
+
+
+def _is_return_syntax_error(error_text: str) -> bool:
+    """Check if error is a SyntaxError caused by 'return' outside function."""
+    lower = error_text.lower()
+    return "syntaxerror" in lower and "return" in lower
+
+
+def _extract_remote_value(remote_object) -> tuple[Any, str]:
+    """Convert CDP RemoteObject to (python_value, type_string)."""
+    type_str = remote_object.type_
+
+    # Handle unserializable values (NaN, Infinity, -Infinity, bigint)
+    if remote_object.unserializable_value is not None:
+        unser = str(remote_object.unserializable_value)
+        if unser.endswith("n"):  # bigint like "42n"
+            try:
+                return (int(unser[:-1]), "number")
+            except ValueError:
+                return (unser, "string")
+        # NaN, Infinity, -Infinity are not JSON-representable
+        return (None, "number")
+
+    if type_str == "undefined":
+        return (None, "undefined")
+    if type_str == "object" and remote_object.subtype == "null":
+        return (None, "null")
+    if type_str in ("string", "number", "boolean"):
+        return (remote_object.value, type_str)
+    if type_str == "object":
+        value = remote_object.value
+        if isinstance(value, list):
+            return (value, "array")
+        return (value, "object")
+    # symbol, function, etc. — return description as string
+    return (remote_object.description or str(remote_object.value), "string")
+
+
+def _cdp_evaluate_direct(target, script: str) -> tuple[Any, str]:
+    """Evaluate JS via CDP Runtime.evaluate on a target with run_cdp_command."""
+    from botasaurus_driver import cdp
+
+    response = target.run_cdp_command(cdp.runtime.evaluate(
+        expression=script,
+        return_by_value=True,
+        await_promise=True,
+        user_gesture=True,
+        repl_mode=True,
+    ))
+
+    if not response:
+        raise RuntimeError("CDP Runtime.evaluate returned no response")
+
+    remote_object, exception_details = response
+
+    if exception_details is not None:
+        error_text = _extract_exception_text(exception_details)
+        if "return" in script and _is_return_syntax_error(error_text):
+            # Retry with function wrapper for backward compatibility
+            wrapped = f"(() => {{ {script} }})()"
+            return _cdp_evaluate_direct(target, wrapped)
+        raise RuntimeError(error_text)
+
+    return _extract_remote_value(remote_object)
+
+
+def _cdp_evaluate_iframe_element(iframe_elem, script: str) -> tuple[Any, str]:
+    """Evaluate JS inside a same-origin iframe using callFunctionOn.
+
+    IframeElement cannot use run_cdp_command (raises UnavailableMethodError).
+    We use Runtime.callFunctionOn targeting the iframe's document node with
+    indirect eval to get natural expression return semantics.
+    """
+    from botasaurus_driver import cdp
+
+    doc_core = iframe_elem.doc_elem._elem
+    tab = doc_core._tab
+
+    # Resolve the document node to get a RemoteObject with object_id
+    remote_obj = tab.send(
+        cdp.dom.resolve_node(backend_node_id=doc_core.backend_node_id)
+    )
+    if not remote_obj or not remote_obj.object_id:
+        raise RuntimeError("Could not resolve iframe document for JS evaluation")
+
+    # Indirect eval: (0, eval)() runs in global scope of the iframe context
+    eval_fn = f"function() {{ return (0, eval)({json.dumps(script)}); }}"
+
+    response = tab.send(cdp.runtime.call_function_on(
+        function_declaration=eval_fn,
+        object_id=remote_obj.object_id,
+        return_by_value=True,
+        await_promise=True,
+        user_gesture=True,
+    ))
+
+    if not response:
+        raise RuntimeError("CDP callFunctionOn returned no response")
+
+    remote_object, exception_details = response
+
+    if exception_details is not None:
+        error_text = _extract_exception_text(exception_details)
+        if "return" in script and _is_return_syntax_error(error_text):
+            # Retry with function body for backward compatibility
+            wrapped_fn = f"function() {{ {script} }}"
+            response = tab.send(cdp.runtime.call_function_on(
+                function_declaration=wrapped_fn,
+                object_id=remote_obj.object_id,
+                return_by_value=True,
+                await_promise=True,
+                user_gesture=True,
+            ))
+            if not response:
+                raise RuntimeError("CDP callFunctionOn retry returned no response")
+            remote_object, exception_details = response
+            if exception_details is not None:
+                raise RuntimeError(_extract_exception_text(exception_details))
+        else:
+            raise RuntimeError(error_text)
+
+    return _extract_remote_value(remote_object)
+
+
+def _cdp_evaluate(
+    driver: Driver,
+    script: str,
+    frame_context: str | None = None,
+) -> tuple[Any, str]:
+    """Evaluate JS via CDP, bypassing botasaurus wrapping.
+
+    Returns (python_value, result_type_string) tuple.
+    """
+    from botasaurus_driver.driver import IframeElement
+
+    target = _resolve_target(driver, frame_context)
+
+    if isinstance(target, IframeElement):
+        return _cdp_evaluate_iframe_element(target, script)
+    # Driver (main page) or IframeTab (cross-origin) — both support run_cdp_command
+    return _cdp_evaluate_direct(target, script)
+
+
 def run_javascript(
     driver: Driver,
     script: str,
@@ -324,9 +482,12 @@ def run_javascript(
 ) -> tuple[JavaScriptResult, JavaScriptRecord]:
     """Execute arbitrary JavaScript in the page context.
 
+    Uses CDP Runtime.evaluate directly for natural expression return semantics.
+    Scripts with explicit 'return' statements also work (backward compatible).
+
     Args:
         driver: Active botasaurus-driver instance.
-        script: JavaScript code to execute. The last expression is returned.
+        script: JavaScript code to execute. The last expression's value is returned.
         frame_context: Iframe selector path, or None/'main' for top-level page.
 
     Returns:
@@ -336,33 +497,7 @@ def run_javascript(
     timestamp = datetime.now(timezone.utc).isoformat()
 
     try:
-        target = _resolve_target(driver, frame_context)
-        raw_result = target.run_js(script)
-
-        # Classify the result type and normalize
-        if raw_result is None:
-            result_type = "undefined"
-            result_value = None
-        elif isinstance(raw_result, bool):
-            result_type = "boolean"
-            result_value = raw_result
-        elif isinstance(raw_result, (int, float)):
-            result_type = "number"
-            result_value = raw_result
-        elif isinstance(raw_result, str):
-            result_type = "string"
-            result_value = raw_result
-        elif isinstance(raw_result, list):
-            result_type = "array"
-            result_value = raw_result
-        elif isinstance(raw_result, dict):
-            result_type = "object"
-            result_value = raw_result
-        else:
-            # Non-serializable — coerce to string
-            result_type = "string"
-            result_value = str(raw_result)
-
+        result_value, result_type = _cdp_evaluate(driver, script, frame_context)
         elapsed = int((time.perf_counter() - start) * 1000)
 
         js_result = JavaScriptResult(
@@ -372,8 +507,11 @@ def run_javascript(
             elapsed_ms=elapsed,
         )
 
-        # Build compact preview for history
-        result_str = json.dumps(result_value, default=str) if result_value is not None else "undefined"
+        result_str = (
+            json.dumps(result_value, default=str)
+            if result_value is not None
+            else result_type
+        )
         record = JavaScriptRecord(
             script_preview=script[:200],
             frame_context=frame_context,

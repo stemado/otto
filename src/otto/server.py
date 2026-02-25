@@ -516,6 +516,7 @@ async def execute_javascript(
     Args:
         session_id: Active session ID.
         script: JavaScript code to execute. The last expression is returned as the result.
+               Scripts with explicit 'return' statements also work for backward compatibility.
         frame_context: Iframe selector path for execution context. Use 'main' or omit for top-level.
     """
     app_ctx = _get_ctx(ctx)

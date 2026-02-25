@@ -277,6 +277,81 @@ def test_js_record_preview(session):
     assert len(record.script_preview) <= 200
 
 
+# CDP-direct evaluation — expressions without 'return' (the bug fix)
+
+
+def test_js_expression_returns_value(session):
+    """JavaScript expressions without 'return' return their value (the bug fix)."""
+    result, _ = run_javascript(session.driver, "document.title")
+    assert result.success is True
+    assert result.result_type == "string"
+    assert result.result == "Actions Test Page"
+
+
+def test_js_expression_arithmetic(session):
+    """Arithmetic expressions return their computed value."""
+    result, _ = run_javascript(session.driver, "2 + 2")
+    assert result.success is True
+    assert result.result_type == "number"
+    assert result.result == 4
+
+
+def test_js_expression_null(session):
+    """null expression returns null type."""
+    result, _ = run_javascript(session.driver, "null")
+    assert result.success is True
+    assert result.result_type == "null"
+    assert result.result is None
+
+
+def test_js_expression_undefined(session):
+    """undefined expression returns undefined type."""
+    result, _ = run_javascript(session.driver, "undefined")
+    assert result.success is True
+    assert result.result_type == "undefined"
+    assert result.result is None
+
+
+def test_js_expression_object(session):
+    """Object literal expressions return correctly (must use parens)."""
+    result, _ = run_javascript(session.driver, "({a: 1, b: 'two'})")
+    assert result.success is True
+    assert result.result_type == "object"
+    assert result.result["a"] == 1
+
+
+def test_js_expression_array(session):
+    """Array expressions return correctly."""
+    result, _ = run_javascript(session.driver, "[1, 2, 3]")
+    assert result.success is True
+    assert result.result_type == "array"
+    assert result.result == [1, 2, 3]
+
+
+def test_js_multistatement(session):
+    """Multi-statement script returns last expression value."""
+    result, _ = run_javascript(session.driver, "let x = 5; x * 2")
+    assert result.success is True
+    assert result.result == 10
+
+
+def test_js_return_backward_compat(session):
+    """Scripts with explicit 'return' still work."""
+    result, _ = run_javascript(session.driver, "return document.title")
+    assert result.success is True
+    assert result.result == "Actions Test Page"
+
+
+def test_js_await_promise(session):
+    """Async expressions with Promises resolve correctly."""
+    result, _ = run_javascript(
+        session.driver,
+        "await new Promise(resolve => setTimeout(() => resolve('done'), 50))",
+    )
+    assert result.success is True
+    assert result.result == "done"
+
+
 # ---------------------------------------------------------------------------
 # take_screenshot
 # ---------------------------------------------------------------------------
