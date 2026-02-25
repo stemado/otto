@@ -92,8 +92,17 @@ def execute_action(
             case "type":
                 _require(selector, "selector required for type")
                 _require(value, "value required for type")
-                target.type(selector, value)
-                action_desc = f"Typed into '{selector}'"
+                injected_type = _try_constrained_input(target, selector, value)
+                if injected_type is None:
+                    # Normal text input — use keystroke simulation
+                    target.type(selector, value)
+                    action_desc = f"Typed into '{selector}'"
+                else:
+                    # Constrained input — value was set via JS injection
+                    action_desc = (
+                        f"Set value on '{selector}' "
+                        f"(type='{injected_type}', used direct value injection)"
+                    )
 
             case "select":
                 _require(selector, "selector required for select")
@@ -315,6 +324,62 @@ def _capture_dom_fingerprint(driver: Driver) -> dict | None:
         )
     except Exception:
         return None
+
+
+# ---------------------------------------------------------------------------
+# Smart type — constrained HTML5 input auto-detection
+# ---------------------------------------------------------------------------
+# HTML5 date/time inputs reject keystroke simulation because browsers enforce
+# format constraints via an internal state machine. This helper detects
+# constrained types and uses JS value injection + event dispatch instead.
+# See docs/plans/2026-02-25-smart-form-input-design.md
+# ---------------------------------------------------------------------------
+
+_CONSTRAINED_INPUT_TYPES = frozenset({"date", "time", "datetime-local", "month", "week"})
+
+# Atomic JS: detect input type AND set value in one round-trip.
+# Uses the native HTMLInputElement.value setter to bypass framework overrides
+# (React, Angular, etc.), then dispatches input + change events.
+# NOTE: Uses 'return' + IIFE pattern for botasaurus run_js compatibility.
+_CONSTRAINED_INPUT_JS = (
+    "return (function(sel, val) {"
+    "  var el = document.querySelector(sel);"
+    "  if (!el) return {action: 'not_found'};"
+    "  var type = (el.type || '').toLowerCase();"
+    "  if (%s.indexOf(type) === -1) {"
+    "    return {action: 'passthrough', type: type};"
+    "  }"
+    "  var setter = Object.getOwnPropertyDescriptor("
+    "    HTMLInputElement.prototype, 'value'"
+    "  ).set;"
+    "  setter.call(el, val);"
+    "  el.dispatchEvent(new Event('input', {bubbles: true}));"
+    "  el.dispatchEvent(new Event('change', {bubbles: true}));"
+    "  return {action: 'injected', type: type};"
+    "})(%s, %s)"
+)
+
+
+def _try_constrained_input(target, selector: str, value: str) -> str | None:
+    """Attempt value injection for constrained HTML5 input types.
+
+    Executes a single atomic JS call that detects the input type and, if
+    constrained (date, time, datetime-local, month, week), sets the value
+    via the native setter + event dispatch.
+
+    Returns the input type string if injection was performed, or None if
+    the input is a normal type and keystroke simulation should be used.
+    Falls back to None on any error (safe degradation to original behavior).
+    """
+    try:
+        types_js = json.dumps(sorted(_CONSTRAINED_INPUT_TYPES))
+        js = _CONSTRAINED_INPUT_JS % (types_js, json.dumps(selector), json.dumps(value))
+        result = target.run_js(js)
+        if isinstance(result, dict) and result.get("action") == "injected":
+            return result.get("type", "unknown")
+    except Exception:
+        pass  # Detection failed — fall back to normal type
+    return None
 
 
 # ---------------------------------------------------------------------------
