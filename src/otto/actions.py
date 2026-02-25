@@ -407,7 +407,11 @@ _SUBMIT_CHECK_JS = (
     "  var tag = el.tagName.toLowerCase();"
     "  var type = (el.type || '').toLowerCase();"
     "  if (tag === 'input' && type === 'submit') return true;"
-    "  if (tag === 'button' && (type === 'submit' || (!el.type && el.closest('form')))) return true;"
+    "  if (tag === 'button') {"
+    "    var attr = el.getAttribute('type');"
+    "    if (attr && attr.toLowerCase() === 'submit') return true;"
+    "    if (!attr && el.closest('form')) return true;"
+    "  }"
     "  return false;"
     "})(%s)"
 )
