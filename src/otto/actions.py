@@ -223,13 +223,26 @@ def execute_action(
     ):
         post_fingerprint = _capture_dom_fingerprint(driver)
         if post_fingerprint and post_fingerprint == pre_click_fingerprint:
-            warning = (
-                "Click reported success but no DOM changes detected (URL, child count, "
-                "title, and aria-hidden count are all unchanged). The click may not have "
-                "had an effect. Consider using inspect_element to check if the element is "
-                "visible, obscured, or in a shadow DOM. Increasing wait_after may help if "
-                "the page uses async rendering."
-            )
+            # Check if this is a submit button for a more targeted warning
+            if selector and _is_submit_element(
+                _resolve_target(driver, frame_context), selector
+            ):
+                warning = (
+                    "Click on submit button had no visible DOM effect. The form "
+                    "may have submitted via AJAX (check network monitoring), or "
+                    "the click may not have triggered submission. If the form did "
+                    "not submit, use execute_javascript with "
+                    "`document.querySelector('SELECTOR').closest('form')"
+                    ".requestSubmit()` to submit programmatically."
+                )
+            else:
+                warning = (
+                    "Click reported success but no DOM changes detected (URL, child "
+                    "count, title, and aria-hidden count are all unchanged). The click "
+                    "may not have had an effect. Consider using inspect_element to check "
+                    "if the element is visible, obscured, or in a shadow DOM. Increasing "
+                    "wait_after may help if the page uses async rendering."
+                )
 
     result = ActionResult(
         success=error is None,
@@ -381,6 +394,36 @@ def _try_constrained_input(target, selector: str, value: str) -> str | None:
     except Exception:
         logging.debug("Constrained input detection failed for %s, falling back to keystrokes", selector, exc_info=True)
     return None
+
+
+# ---------------------------------------------------------------------------
+# Submit element detection for enhanced click warning
+# ---------------------------------------------------------------------------
+
+_SUBMIT_CHECK_JS = (
+    "return (function(sel) {"
+    "  var el = document.querySelector(sel);"
+    "  if (!el) return false;"
+    "  var tag = el.tagName.toLowerCase();"
+    "  var type = (el.type || '').toLowerCase();"
+    "  if (tag === 'input' && type === 'submit') return true;"
+    "  if (tag === 'button' && (type === 'submit' || (!el.type && el.closest('form')))) return true;"
+    "  return false;"
+    "})(%s)"
+)
+
+
+def _is_submit_element(target, selector: str) -> bool:
+    """Check if the given selector targets a form submit button.
+
+    Detects <input type="submit">, <button type="submit">, and <button>
+    inside a <form> (default type is submit per HTML spec).
+    Returns False on any error (safe degradation).
+    """
+    try:
+        return bool(target.run_js(_SUBMIT_CHECK_JS % json.dumps(selector)))
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------------------
