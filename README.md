@@ -271,7 +271,7 @@ Otto includes multiple layers of defense:
 
 - **Credential vault** -- Encrypted storage with OS keyring integration (see above)
 - **Runtime scrubbing** -- Secrets injected via `fill_secret` are redacted from all tool output
-- **URL validation** -- Blocks dangerous schemes (`file://`, `javascript://`), cloud metadata endpoints (169.254.169.254), and localhost access
+- **URL validation** -- Blocks dangerous schemes (`file://`, `javascript://`), cloud metadata endpoints (169.254.169.254), and localhost access (opt-in via `OTTO_ALLOW_LOCALHOST` env var — see [Getting Started](docs/getting-started.md#blocked-url-host-localhost))
 - **Path traversal protection** -- Validates all file paths to prevent directory escape
 - **Invisible character stripping** -- Removes zero-width Unicode characters that could hide prompt injection payloads in page text
 - **Content boundary markers** -- Wraps web-sourced data with delimiters that distinguish data from instructions

@@ -173,3 +173,31 @@ These are the tools Claude uses behind the scenes. You don't call them directly 
 - **The browser window is real** — it opens a visible Chrome window on your screen (unless you pass `headless: true`). You can watch Claude drive it in real time.
 - **Don't repeat logins** — the session is stateful. Once you're logged in, stay logged in. Repeated rapid login attempts trigger security detection and CAPTCHAs.
 - **Found a bug?** -- Run `/report bug` and Claude will gather diagnostics, check for duplicates, and file a GitHub issue for you.
+
+### "Blocked URL host: localhost"
+
+If you try to automate a locally running application (`http://localhost:3000`, `http://127.0.0.1:8080`, etc.), you'll get this error:
+
+```text
+Error: Blocked URL host: localhost
+```
+
+Otto blocks loopback addresses by default as an SSRF (Server-Side Request Forgery) safety measure — since Otto takes URLs from the AI conversation, this prevents prompt injection attacks from redirecting the browser to internal services.
+
+To allow localhost access, set the `OTTO_ALLOW_LOCALHOST` environment variable in your MCP configuration. Add an `env` block to the Otto server entry in your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "otto": {
+      "command": "uv",
+      "args": ["run", "--extra", "vault", "--directory", "/path/to/otto", "otto"],
+      "env": {
+        "OTTO_ALLOW_LOCALHOST": "1"
+      }
+    }
+  }
+}
+```
+
+Then restart Claude Code. Cloud metadata endpoints (`169.254.169.254`, etc.) remain blocked regardless of this setting.
