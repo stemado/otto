@@ -327,6 +327,39 @@ def _capture_dom_fingerprint(driver: Driver) -> dict | None:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Empty-result guard — "surprising emptiness" heuristic
+# ---------------------------------------------------------------------------
+# Detects scripts whose structure suggests non-trivial computation occurred
+# but CDP returned undefined/null. Fires a warning, never modifies the script.
+# See docs/plans/2026-02-25-empty-result-guard-design.md
+# ---------------------------------------------------------------------------
+
+_COMPUTATION_PATTERNS = [
+    re.compile(r'\.\s*querySelector(All)?\s*\('),
+    re.compile(r'\.\s*getElementById\s*\('),
+    re.compile(r'\.\s*getElementsBy\w+\s*\('),
+    re.compile(r'\.\s*(textContent|innerText|innerHTML|value|href|src)\b'),
+    re.compile(r'\.\s*(map|filter|find|reduce|flatMap)\s*\('),
+    re.compile(r'\w+\s*\[.+?\]'),
+    re.compile(r'\b(let|const|var)\s+\w+\s*='),
+    re.compile(r'JSON\.\s*(stringify|parse)\s*\('),
+    re.compile(r'\bfetch\s*\('),
+    re.compile(r'\.json\s*\('),
+    re.compile(r'\bawait\s+'),
+]
+
+
+def _seems_like_computation(script: str) -> bool:
+    """Return True if script structure suggests non-trivial computation occurred.
+
+    Used by the empty-result guard to decide whether an undefined/null result
+    is *surprising* (script queried DOM, read properties, transformed collections)
+    vs *expected* (script only performed side effects like console.log).
+    """
+    return any(pat.search(script) for pat in _COMPUTATION_PATTERNS)
+
+
 def _extract_exception_text(exception_details) -> str:
     """Extract a human-readable error message from CDP ExceptionDetails."""
     if exception_details.exception and exception_details.exception.description:
