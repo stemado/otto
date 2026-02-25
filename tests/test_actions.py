@@ -211,6 +211,32 @@ def test_click_noop_button_no_submit_mention(form_session, reset_form_page):
 
 
 # ---------------------------------------------------------------------------
+# execute_action — click (checkbox/radio false-positive suppression)
+# ---------------------------------------------------------------------------
+
+
+def test_click_checkbox_no_false_warning(form_session, reset_form_page):
+    """Click on an unchecked checkbox should not produce a false-positive warning."""
+    result, _ = execute_action(form_session.driver, "click", "#agree-cb", wait_after=300)
+    assert result.success is True
+    assert result.warning is None, f"Unexpected warning for checkbox click: {result.warning}"
+
+
+def test_click_radio_no_false_warning(form_session, reset_form_page):
+    """Click on an unselected radio button should not produce a false-positive warning."""
+    result, _ = execute_action(form_session.driver, "click", "#radio-a", wait_after=300)
+    assert result.success is True
+    assert result.warning is None, f"Unexpected warning for radio click: {result.warning}"
+
+
+def test_click_disabled_checkbox_still_warns(form_session, reset_form_page):
+    """Click on a disabled checkbox should still produce a warning (checked state unchanged)."""
+    result, _ = execute_action(form_session.driver, "click", "#disabled-cb", wait_after=300)
+    # Disabled checkbox can't toggle — the warning is correct
+    assert result.warning is not None, "Expected a no-effect warning for disabled checkbox click"
+
+
+# ---------------------------------------------------------------------------
 # execute_action — select
 # ---------------------------------------------------------------------------
 
