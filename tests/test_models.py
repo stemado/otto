@@ -121,6 +121,26 @@ def test_javascript_result_primitive_types():
         assert result.result == val
 
 
+def test_javascript_result_warning_none_by_default():
+    result = JavaScriptResult(success=True, result="hello", result_type="string")
+    assert result.warning is None
+    dumped = result.model_dump(exclude_none=True)
+    assert "warning" not in dumped
+
+
+def test_javascript_result_warning_present():
+    result = JavaScriptResult(
+        success=True,
+        result=None,
+        result_type="undefined",
+        warning="Warning: result is undefined but script appears to perform non-trivial computation.",
+    )
+    assert result.warning is not None
+    assert "non-trivial" in result.warning
+    dumped = result.model_dump()
+    assert dumped["warning"] == result.warning
+
+
 # --- JavaScriptRecord ---
 
 

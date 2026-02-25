@@ -179,6 +179,7 @@ class JavaScriptResult(BaseModel):
     result: Any = Field(default=None, description="Return value from the script")
     result_type: str = Field(default="undefined", description="JS typeof the result: string, number, object, array, boolean, null, undefined")
     error: str | None = Field(default=None)
+    warning: str | None = Field(default=None, description="Hint when result is empty but script suggests computation occurred")
     elapsed_ms: int = Field(default=0)
 
 
