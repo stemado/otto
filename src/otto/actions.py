@@ -435,7 +435,7 @@ _CHECKED_STATE_JS = (
 )
 
 
-def _capture_checked_state(target, selector: str):
+def _capture_checked_state(target, selector: str) -> bool | None:
     """Capture checked state of a checkbox/radio element.
 
     Returns True/False if the element is checkable, None otherwise.
