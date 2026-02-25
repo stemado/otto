@@ -70,6 +70,7 @@ def execute_action(
     error = None
     action_desc = ""
     pre_click_fingerprint = None
+    pre_checked = None
 
     try:
         # Resolve frame context — get the target to operate on
@@ -87,6 +88,7 @@ def execute_action(
                     )
                 # Capture DOM fingerprint before click for verification
                 pre_click_fingerprint = _capture_dom_fingerprint(driver)
+                pre_checked = _capture_checked_state(target, selector)
                 target.click(selector)
                 action_desc = f"Clicked '{selector}'"
 
@@ -223,8 +225,17 @@ def execute_action(
     ):
         post_fingerprint = _capture_dom_fingerprint(driver)
         if post_fingerprint and post_fingerprint == pre_click_fingerprint:
-            # Check if this is a submit button for a more targeted warning
-            if selector and _is_submit_element(
+            # Check for checkbox/radio state change — suppress warning if toggled
+            checked_changed = False
+            if pre_checked is not None:
+                post_checked = _capture_checked_state(
+                    _resolve_target(driver, frame_context), selector
+                )
+                checked_changed = post_checked is not None and post_checked != pre_checked
+
+            if checked_changed:
+                pass  # Click toggled a checkbox/radio — no warning needed
+            elif selector and _is_submit_element(
                 _resolve_target(driver, frame_context), selector
             ):
                 warning = (
