@@ -182,6 +182,35 @@ def test_type_constrained_dispatches_events(form_session, reset_form_page):
 
 
 # ---------------------------------------------------------------------------
+# execute_action — click (enhanced submit warning)
+# ---------------------------------------------------------------------------
+
+
+def test_click_submit_no_effect_mentions_requestsubmit(form_session, reset_form_page):
+    """Click on submit button with no DOM effect gives submit-specific warning."""
+    # Clone the form to strip all event listeners, then prevent default on submit
+    run_javascript(
+        form_session.driver,
+        "var form = document.getElementById('test-form');"
+        "var clone = form.cloneNode(true);"
+        "form.parentNode.replaceChild(clone, form);"
+        "clone.addEventListener('submit', function(e) { e.preventDefault(); });",
+    )
+    result, _ = execute_action(form_session.driver, "click", "#submit-btn", wait_after=300)
+    # The click should succeed but the warning should mention requestSubmit
+    assert result.warning is not None, "Expected a no-effect warning for submit click"
+    assert "requestSubmit" in result.warning
+
+
+def test_click_noop_button_no_submit_mention(form_session, reset_form_page):
+    """Click on a non-submit button with no DOM effect gives generic warning, not submit-specific."""
+    result, _ = execute_action(form_session.driver, "click", "#noop-btn", wait_after=300)
+    # Warning should fire (no DOM change) but should NOT mention requestSubmit
+    assert result.warning is not None, "Expected a no-effect warning for noop click"
+    assert "requestSubmit" not in result.warning
+
+
+# ---------------------------------------------------------------------------
 # execute_action — select
 # ---------------------------------------------------------------------------
 
