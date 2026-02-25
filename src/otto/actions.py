@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import os
 import re
 import time
@@ -378,7 +379,7 @@ def _try_constrained_input(target, selector: str, value: str) -> str | None:
         if isinstance(result, dict) and result.get("action") == "injected":
             return result.get("type", "unknown")
     except Exception:
-        pass  # Detection failed — fall back to normal type
+        logging.debug("Constrained input detection failed for %s, falling back to keystrokes", selector, exc_info=True)
     return None
 
 

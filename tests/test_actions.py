@@ -27,9 +27,10 @@ def session(base_url):
 
 
 @pytest.fixture(autouse=True)
-def reset_page(session, base_url):
+def reset_page(request, session, base_url):
     """Reset to actions.html before each test to prevent state leakage."""
-    session.driver.get(base_url + "/actions.html")
+    if "form_session" not in request.fixturenames:
+        session.driver.get(base_url + "/actions.html")
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +110,7 @@ def test_type_date_input(form_session, reset_form_page):
     result, _ = execute_action(form_session.driver, "type", "#date", "2026-03-15", wait_after=0)
     assert result.success is True
 
-    js_result, _ = run_javascript(form_session.driver, "document.getElementById('date').value")
+    js_result, _ = run_javascript(form_session.driver, "return document.getElementById('date').value")
     assert js_result.result == "2026-03-15"
 
 
@@ -118,7 +119,7 @@ def test_type_time_input(form_session, reset_form_page):
     result, _ = execute_action(form_session.driver, "type", "#time", "11:45", wait_after=0)
     assert result.success is True
 
-    js_result, _ = run_javascript(form_session.driver, "document.getElementById('time').value")
+    js_result, _ = run_javascript(form_session.driver, "return document.getElementById('time').value")
     assert js_result.result == "11:45"
 
 
@@ -130,7 +131,7 @@ def test_type_datetime_local_input(form_session, reset_form_page):
     assert result.success is True
 
     js_result, _ = run_javascript(
-        form_session.driver, "document.getElementById('datetime').value"
+        form_session.driver, "return document.getElementById('datetime').value"
     )
     assert js_result.result == "2026-03-15T11:45"
 
@@ -140,7 +141,7 @@ def test_type_month_input(form_session, reset_form_page):
     result, _ = execute_action(form_session.driver, "type", "#month", "2026-03", wait_after=0)
     assert result.success is True
 
-    js_result, _ = run_javascript(form_session.driver, "document.getElementById('month').value")
+    js_result, _ = run_javascript(form_session.driver, "return document.getElementById('month').value")
     assert js_result.result == "2026-03"
 
 
@@ -149,7 +150,7 @@ def test_type_week_input(form_session, reset_form_page):
     result, _ = execute_action(form_session.driver, "type", "#week", "2026-W12", wait_after=0)
     assert result.success is True
 
-    js_result, _ = run_javascript(form_session.driver, "document.getElementById('week').value")
+    js_result, _ = run_javascript(form_session.driver, "return document.getElementById('week').value")
     assert js_result.result == "2026-W12"
 
 
@@ -160,7 +161,7 @@ def test_type_text_still_uses_keystrokes(form_session, reset_form_page):
     # action_performed should say "Typed into" (keystrokes), not "Set value on" (injection)
     assert "Typed into" in result.action_performed
 
-    js_result, _ = run_javascript(form_session.driver, "document.getElementById('name').value")
+    js_result, _ = run_javascript(form_session.driver, "return document.getElementById('name').value")
     assert js_result.result == "Otto"
 
 
@@ -175,7 +176,7 @@ def test_type_constrained_dispatches_events(form_session, reset_form_page):
     """Constrained input injection dispatches input and change events."""
     execute_action(form_session.driver, "type", "#time", "09:00", wait_after=0)
 
-    js_result, _ = run_javascript(form_session.driver, "document.getElementById('events').textContent")
+    js_result, _ = run_javascript(form_session.driver, "return document.getElementById('events').textContent")
     assert "time:input" in js_result.result
     assert "time:change" in js_result.result
 
