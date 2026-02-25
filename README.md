@@ -43,6 +43,25 @@ Other browser automation tools require you to already know the page structure an
 
 > **New here?** The [Getting Started guide](docs/getting-started.md) walks through a complete example from scout to scheduled script.
 
+## Roadmap: The Next Demonstration
+
+The current showcase tells a compact story — scout, automate, export. The next version expands this into a **seven-phase cinematic narrative** that walks stakeholders from the initial pain ("your data is trapped behind a login screen") through teaching Otto, workflow transformation, delivery, internal discovery, the API switch, and finally integration at scale.
+
+Two design documents define this upcoming work:
+
+- **[Visual Style & Design System](docs/otto-artifact-style-prompt.md)** — The complete design bible: color tokens, typography, animation principles, spatial grammar, and component patterns. Every phase of the narrative follows this system.
+- **[Expanded Narrative Build Prompt](docs/otto-narrative-build-prompt.md)** — The full seven-phase story arc with headlines, visual concepts, and build instructions for each act of the presentation.
+
+| Phase | Headline | Status |
+|-------|----------|--------|
+| 0 — The Problem | Your data is trapped behind a login screen. | Built |
+| 1 — You Teach Otto | You teach Otto your portal. | Next |
+| 2 — The Transformation | Your words become a workflow. | Planned |
+| 3 — Delivery | The report finds you. | Planned |
+| 4 — Internal Discovery | Your team sees the opportunity. | Planned |
+| 5 — The API Switch | One toggle. A new API. | Planned |
+| 6 — Integration at Scale | Every system gets an API. | Planned |
+
 ## Install
 
 ### Prerequisites

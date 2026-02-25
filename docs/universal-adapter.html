@@ -133,6 +133,7 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    width: 64px;
     transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -159,8 +160,8 @@
     transition: all 0.6s ease;
   }
 
-  /* Legacy nodes (left side) */
-  .node.legacy { opacity: 0; transform: translateX(-20px); }
+  /* Legacy portal nodes (right side — the target websites) */
+  .node.legacy { opacity: 0; transform: translateX(20px); }
   .node.legacy .node-icon { border-color: var(--dim); }
 
   .node.legacy.active {
@@ -188,8 +189,8 @@
   }
   .node.legacy.repaired .node-label { color: var(--green); }
 
-  /* Modern nodes (right side) */
-  .node.modern { opacity: 0; transform: translateX(20px); }
+  /* Modern system nodes (left side — the demand/trigger side) */
+  .node.modern { opacity: 0; transform: translateX(-20px); }
   .node.modern .node-icon { border-color: var(--dim); }
 
   .node.modern.active {
@@ -255,16 +256,78 @@
     transition: all 0.6s ease;
   }
 
-  /* Otto grows in Phase III */
-  .stage.phase-3 .otto-icon,
-  .stage.phase-4 .otto-icon {
+  /* Otto hidden for problem phase */
+  .otto-hub.dimmed {
+    opacity: 0.06;
+    pointer-events: none;
+    filter: grayscale(1);
+  }
+  .otto-hub.dimmed .otto-icon::before {
+    animation: none;
+    opacity: 0;
+  }
+
+  /* Manual path — dashed line showing tedious manual workflow */
+  .manual-path {
+    fill: none;
+    stroke: var(--red);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+    stroke-linecap: round;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  .manual-path.active {
+    opacity: 0.5;
+    animation: manualPulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes manualPulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Time cost stat that appears during problem phase */
+  .time-stat {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.8s ease 0.3s;
+    z-index: 6;
+    pointer-events: none;
+  }
+  .time-stat.active { opacity: 1; }
+  .time-stat-number {
+    font-family: var(--sans);
+    font-size: 2.8rem;
+    font-weight: 600;
+    color: var(--red);
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+  .time-stat-unit {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  /* Otto grows in Phase III (shifted indices: now phase-4 and phase-5) */
+  .stage.phase-4 .otto-icon,
+  .stage.phase-5 .otto-icon {
     width: 90px;
     height: 90px;
     border-radius: 22px;
     font-size: 0.85rem;
   }
-  .stage.phase-3 .otto-sub,
-  .stage.phase-4 .otto-sub {
+  .stage.phase-4 .otto-sub,
+  .stage.phase-5 .otto-sub {
     color: var(--otto);
     font-size: 0.7rem;
   }
@@ -285,25 +348,30 @@
     fill: none;
     stroke: var(--connector);
     stroke-width: 1.5;
-    stroke-dasharray: 6 4;
+    stroke-linecap: round;
     opacity: 0;
-    transition: opacity 0.6s ease, stroke 0.6s ease;
+    transition: opacity 0.6s ease, stroke 0.6s ease, stroke-width 0.6s ease;
   }
   .connector-line.active {
-    opacity: 1;
+    opacity: 0.5;
   }
   .connector-line.flowing {
     stroke: var(--otto);
-    stroke-dashoffset: 0;
-    animation: flowDash 1.5s linear infinite;
+    stroke-width: 2;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 4px var(--otto-glow));
   }
   .connector-line.glitch {
     stroke: var(--red);
-    animation: flowDash 0.4s linear infinite;
+    stroke-width: 2;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.3));
   }
   .connector-line.repaired {
     stroke: var(--green);
-    animation: flowDash 1.5s linear infinite;
+    stroke-width: 2;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.2));
   }
 
   /* Data flow dots along connectors */
@@ -317,7 +385,7 @@
     opacity: 1;
   }
 
-  /* ── User/Schedule icon (right-side context) ── */
+  /* ── User/Schedule icon (left-side context) ── */
   .context-icon {
     position: absolute;
     display: flex;
@@ -495,10 +563,6 @@
     50% { opacity: 0.2; transform: scale(1.08); }
   }
 
-  @keyframes flowDash {
-    to { stroke-dashoffset: -20; }
-  }
-
   @keyframes glitchShake {
     0%, 100% { transform: translateX(0); }
     20% { transform: translateX(-3px) rotate(-1deg); }
@@ -522,6 +586,7 @@
     .title-main { font-size: 1.5rem; }
     .headline { font-size: 1.4rem; }
     .stage { height: 280px; }
+    .node { width: 50px; }
     .node-icon { width: 50px; height: 50px; font-size: 1.2rem; border-radius: 12px; }
     .otto-icon { width: 64px; height: 64px; font-size: 0.9rem; }
     .node-label { font-size: 0.6rem; }
@@ -548,39 +613,58 @@
     <!-- SVG Connectors Layer -->
     <div class="connectors">
       <svg viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet">
-        <!-- Legacy → Otto connectors -->
-        <path id="conn-l1" class="connector-line" d="M 170,170 C 280,170 320,170 400,170" />
-        <path id="conn-l2" class="connector-line" d="M 170,90 C 260,90 320,130 400,155" />
-        <path id="conn-l3" class="connector-line" d="M 170,250 C 260,250 320,210 400,185" />
+        <!-- Manual workflow path (Problem phase — direct, broken path from user to portal) -->
+        <path id="manual-path" class="manual-path" d="M 120,170 C 250,170 350,200 480,210 C 610,220 700,170 810,170" />
 
-        <!-- Otto → Modern connectors -->
-        <path id="conn-r1" class="connector-line" d="M 560,170 C 650,170 680,170 790,170" />
-        <path id="conn-r2" class="connector-line" d="M 560,155 C 650,130 700,90 790,90" />
-        <path id="conn-r3" class="connector-line" d="M 560,185 C 650,210 700,250 790,250" />
+        <!-- Left connectors: User/Modern → Otto -->
+        <path id="conn-l1" class="connector-line" d="M 150,170 C 260,170 340,170 430,170" />
+        <path id="conn-l2" class="connector-line" d="M 150,48 C 260,48 340,110 430,155" />
+        <path id="conn-l3" class="connector-line" d="M 150,292 C 260,292 340,230 430,185" />
+
+        <!-- Right connectors: Otto → Legacy portals -->
+        <path id="conn-r1" class="connector-line" d="M 530,170 C 640,170 720,170 810,170" />
+        <path id="conn-r2" class="connector-line" d="M 530,155 C 640,110 720,48 810,48" />
+        <path id="conn-r3" class="connector-line" d="M 530,185 C 640,230 720,292 810,292" />
 
         <!-- Animated flow dots -->
-        <circle class="flow-dot" id="dot-l1"><animateMotion dur="2s" repeatCount="indefinite" path="M 170,170 C 280,170 320,170 400,170" /></circle>
-        <circle class="flow-dot" id="dot-l2"><animateMotion dur="2.3s" repeatCount="indefinite" path="M 170,90 C 260,90 320,130 400,155" /></circle>
-        <circle class="flow-dot" id="dot-l3"><animateMotion dur="2.1s" repeatCount="indefinite" path="M 170,250 C 260,250 320,210 400,185" /></circle>
+        <circle class="flow-dot" id="dot-l1"><animateMotion dur="2s" repeatCount="indefinite" path="M 150,170 C 260,170 340,170 430,170" /></circle>
+        <circle class="flow-dot" id="dot-l2"><animateMotion dur="2.3s" repeatCount="indefinite" path="M 150,48 C 260,48 340,110 430,155" /></circle>
+        <circle class="flow-dot" id="dot-l3"><animateMotion dur="2.1s" repeatCount="indefinite" path="M 150,292 C 260,292 340,230 430,185" /></circle>
 
-        <circle class="flow-dot" id="dot-r1"><animateMotion dur="1.8s" repeatCount="indefinite" path="M 560,170 C 650,170 680,170 790,170" /></circle>
-        <circle class="flow-dot" id="dot-r2"><animateMotion dur="2.2s" repeatCount="indefinite" path="M 560,155 C 650,130 700,90 790,90" /></circle>
-        <circle class="flow-dot" id="dot-r3"><animateMotion dur="2s" repeatCount="indefinite" path="M 560,185 C 650,210 700,250 790,250" /></circle>
+        <circle class="flow-dot" id="dot-r1"><animateMotion dur="1.8s" repeatCount="indefinite" path="M 530,170 C 640,170 720,170 810,170" /></circle>
+        <circle class="flow-dot" id="dot-r2"><animateMotion dur="2.2s" repeatCount="indefinite" path="M 530,155 C 640,110 720,48 810,48" /></circle>
+        <circle class="flow-dot" id="dot-r3"><animateMotion dur="2s" repeatCount="indefinite" path="M 530,185 C 640,230 720,292 810,292" /></circle>
       </svg>
     </div>
 
-    <!-- Legacy Systems (left) -->
-    <div class="node legacy" id="legacy-1" style="left: 80px; top: 50%;">
-      <div class="node-icon">&#127970;</div>
-      <div class="node-label">HR Portal</div>
+    <!-- Context icons: You / Schedule (left side — the trigger) -->
+    <div class="context-icon" id="ctx-user" style="left: 60px; top: calc(50% - 24px);">
+      <div class="ctx-symbol">&#128100;</div>
+      <div class="ctx-label">You</div>
     </div>
-    <div class="node legacy" id="legacy-2" style="left: 80px; top: 14%;">
-      <div class="node-icon">&#128230;</div>
-      <div class="node-label">Vendor Dashboard</div>
+    <div class="context-icon" id="ctx-schedule" style="left: 60px; top: calc(50% - 24px);">
+      <div class="ctx-symbol">&#128337;</div>
+      <div class="ctx-label">Schedule</div>
     </div>
-    <div class="node legacy" id="legacy-3" style="left: 80px; top: 86%;">
-      <div class="node-icon">&#128203;</div>
-      <div class="node-label">Benefits Platform</div>
+
+    <!-- Modern Systems (left side — demand/consumers) -->
+    <div class="node modern" id="modern-1" style="left: 80px; top: calc(50% - 32px);">
+      <div class="node-icon">&#9881;</div>
+      <div class="node-label">ERP System</div>
+    </div>
+    <div class="node modern" id="modern-2" style="left: 80px; top: calc(14% - 32px);">
+      <div class="node-icon">&#128176;</div>
+      <div class="node-label">Payroll</div>
+    </div>
+    <div class="node modern" id="modern-3" style="left: 80px; top: calc(86% - 32px);">
+      <div class="node-icon">&#128187;</div>
+      <div class="node-label">Custom App</div>
+    </div>
+
+    <!-- Time cost stat (appears center-stage during Problem phase, replacing Otto) -->
+    <div class="time-stat" id="time-stat">
+      <div class="time-stat-number">17 hrs</div>
+      <div class="time-stat-unit">per year · per report</div>
     </div>
 
     <!-- Otto Hub (center) -->
@@ -589,28 +673,54 @@
       <div class="otto-sub" id="otto-sub">adapter</div>
     </div>
 
-    <!-- Modern Systems (right) -->
-    <div class="node modern" id="modern-1" style="right: 80px; top: 50%;">
-      <div class="node-icon">&#9881;</div>
-      <div class="node-label">ERP System</div>
+    <!-- Legacy Portals (right side — the target websites) -->
+    <div class="node legacy" id="legacy-1" style="right: 80px; top: calc(50% - 32px);">
+      <div class="node-icon">
+        <svg viewBox="0 0 36 28" width="36" height="28" fill="none">
+          <rect x=".5" y=".5" width="35" height="27" rx="3" stroke="#64748b" stroke-width=".75"/>
+          <line x1=".5" y1="7" x2="35.5" y2="7" stroke="#64748b" stroke-width=".5"/>
+          <circle cx="4.5" cy="3.5" r="1.2" fill="#f87171" opacity=".6"/>
+          <circle cx="8.5" cy="3.5" r="1.2" fill="#fbbf24" opacity=".6"/>
+          <circle cx="12.5" cy="3.5" r="1.2" fill="#34d399" opacity=".6"/>
+          <rect x="4" y="10" width="28" height="1.5" rx=".75" fill="#334155"/>
+          <rect x="4" y="14" width="22" height="1.5" rx=".75" fill="#334155"/>
+          <rect x="4" y="18" width="26" height="1.5" rx=".75" fill="#334155"/>
+          <rect x="4" y="22" width="18" height="1.5" rx=".75" fill="#334155"/>
+        </svg>
+      </div>
+      <div class="node-label">HR Portal</div>
     </div>
-    <div class="node modern" id="modern-2" style="right: 80px; top: 14%;">
-      <div class="node-icon">&#128176;</div>
-      <div class="node-label">Payroll</div>
+    <div class="node legacy" id="legacy-2" style="right: 80px; top: calc(14% - 32px);">
+      <div class="node-icon">
+        <svg viewBox="0 0 36 28" width="36" height="28" fill="none">
+          <rect x=".5" y=".5" width="35" height="27" rx="3" stroke="#64748b" stroke-width=".75"/>
+          <line x1=".5" y1="7" x2="35.5" y2="7" stroke="#64748b" stroke-width=".5"/>
+          <circle cx="4.5" cy="3.5" r="1.2" fill="#f87171" opacity=".6"/>
+          <circle cx="8.5" cy="3.5" r="1.2" fill="#fbbf24" opacity=".6"/>
+          <circle cx="12.5" cy="3.5" r="1.2" fill="#34d399" opacity=".6"/>
+          <rect x="4" y="10" width="13" height="6" rx="1" fill="#334155"/>
+          <rect x="19" y="10" width="13" height="6" rx="1" fill="#334155"/>
+          <rect x="4" y="18.5" width="13" height="6" rx="1" fill="#334155"/>
+          <rect x="19" y="18.5" width="13" height="6" rx="1" fill="#334155"/>
+        </svg>
+      </div>
+      <div class="node-label">Vendor Dashboard</div>
     </div>
-    <div class="node modern" id="modern-3" style="right: 80px; top: 86%;">
-      <div class="node-icon">&#128187;</div>
-      <div class="node-label">Custom App</div>
-    </div>
-
-    <!-- Context icons (user, schedule) -->
-    <div class="context-icon" id="ctx-user" style="right: 28px; top: 50%;">
-      <div class="ctx-symbol">&#128100;</div>
-      <div class="ctx-label">You</div>
-    </div>
-    <div class="context-icon" id="ctx-schedule" style="right: 28px; top: 50%;">
-      <div class="ctx-symbol">&#128337;</div>
-      <div class="ctx-label">Schedule</div>
+    <div class="node legacy" id="legacy-3" style="right: 80px; top: calc(86% - 32px);">
+      <div class="node-icon">
+        <svg viewBox="0 0 36 28" width="36" height="28" fill="none">
+          <rect x=".5" y=".5" width="35" height="27" rx="3" stroke="#64748b" stroke-width=".75"/>
+          <line x1=".5" y1="7" x2="35.5" y2="7" stroke="#64748b" stroke-width=".5"/>
+          <circle cx="4.5" cy="3.5" r="1.2" fill="#f87171" opacity=".6"/>
+          <circle cx="8.5" cy="3.5" r="1.2" fill="#fbbf24" opacity=".6"/>
+          <circle cx="12.5" cy="3.5" r="1.2" fill="#34d399" opacity=".6"/>
+          <rect x="4" y="10.5" width="28" height="2" rx="1" fill="#475569"/>
+          <rect x="4" y="15" width="28" height="1.5" rx=".75" fill="#334155"/>
+          <rect x="4" y="19" width="28" height="1.5" rx=".75" fill="#334155"/>
+          <rect x="4" y="23" width="28" height="1.5" rx=".75" fill="#334155"/>
+        </svg>
+      </div>
+      <div class="node-label">Benefits Platform</div>
     </div>
   </div>
 
@@ -624,15 +734,18 @@
   <!-- Phase dots -->
   <div class="phase-dots" id="phase-dots">
     <div class="phase-dot" data-phase="0">
-      <span class="phase-dot-label">I</span>
+      <span class="phase-dot-label">0</span>
     </div>
     <div class="phase-dot" data-phase="1">
-      <span class="phase-dot-label">II</span>
+      <span class="phase-dot-label">I</span>
     </div>
     <div class="phase-dot" data-phase="2">
-      <span class="phase-dot-label">III</span>
+      <span class="phase-dot-label">II</span>
     </div>
     <div class="phase-dot" data-phase="3">
+      <span class="phase-dot-label">III</span>
+    </div>
+    <div class="phase-dot" data-phase="4">
       <span class="phase-dot-label">IV</span>
     </div>
   </div>
@@ -646,13 +759,27 @@
 
 const phaseData = [
   {
+    label: 'The Problem',
+    headline: 'Your data is trapped behind a login screen.',
+    subcaption: 'No API. No export endpoint. Just a browser, a password, and 20 minutes of clicking — every single week. That\'s 17 hours a year to fetch one report. Multiply across every portal your team touches.',
+    legacy: [0],
+    modern: [],
+    connectors: { left: [], right: [] },
+    dots: { left: [], right: [] },
+    ctx: 'user',
+    ottoSub: '',
+    hideOtto: true,
+    showManualPath: true,
+    showTimeStat: true,
+  },
+  {
     label: 'Phase I — Plugin',
     headline: 'Otto learns your portal.',
     subcaption: 'You describe the task. Otto navigates the portal, handles the login, and brings back the data. Like a universal travel adapter — one tool that fits any outlet.',
     legacy: [0],        // which legacy nodes are active (index)
     modern: [],
-    connectors: { left: [0], right: [] },
-    dots: { left: [0], right: [] },
+    connectors: { left: [0], right: [0] },
+    dots: { left: [0], right: [0] },
     ctx: 'user',
     ottoSub: 'adapter',
   },
@@ -662,8 +789,8 @@ const phaseData = [
     subcaption: 'Set a schedule. Otto runs the same workflow automatically — every day, every week, whenever you need. If something breaks, Otto fixes it.',
     legacy: [0],
     modern: [],
-    connectors: { left: [0], right: [] },
-    dots: { left: [0], right: [] },
+    connectors: { left: [0], right: [0] },
+    dots: { left: [0], right: [0] },
     ctx: 'schedule',
     ottoSub: 'engine',
     flowClass: 'flowing',
@@ -745,7 +872,6 @@ function clearPhaseVisuals() {
   // Reset all nodes
   legacyNodes.forEach(n => {
     n.classList.remove('active', 'glitch', 'repaired');
-    // Reset transform for vertical centering
     n.style.transform = '';
   });
   modernNodes.forEach(n => n.classList.remove('active'));
@@ -761,6 +887,13 @@ function clearPhaseVisuals() {
   // Reset context icons
   $('#ctx-user').classList.remove('active');
   $('#ctx-schedule').classList.remove('active');
+
+  // Reset manual path and time stat
+  document.getElementById('manual-path').classList.remove('active');
+  document.getElementById('time-stat').classList.remove('active');
+
+  // Reset Otto visibility
+  document.querySelector('.otto-hub').classList.remove('dimmed');
 
   // Reset captions
   $('#phase-label').classList.remove('active');
@@ -807,13 +940,33 @@ async function showPhase(index, animate = true) {
   // Otto sub-label
   $('#otto-sub').textContent = phase.ottoSub;
 
-  // Activate legacy nodes
-  for (const i of phase.legacy) {
-    legacyNodes[i].classList.add('active');
-    if (animate) await wait(150);
+  // Handle Otto visibility — dim during problem phase, visible otherwise
+  if (phase.hideOtto) {
+    document.querySelector('.otto-hub').classList.add('dimmed');
   }
 
-  // Activate connectors (left)
+  // Show manual path if this is the problem phase
+  if (phase.showManualPath) {
+    if (animate) await wait(300);
+    document.getElementById('manual-path').classList.add('active');
+  }
+
+  // Show time stat overlay
+  if (phase.showTimeStat) {
+    if (animate) await wait(600);
+    document.getElementById('time-stat').classList.add('active');
+  }
+
+  // Context icon (left side — trigger)
+  if (phase.ctx === 'user') {
+    $('#ctx-user').classList.add('active');
+  } else if (phase.ctx === 'schedule') {
+    $('#ctx-schedule').classList.add('active');
+  }
+
+  if (animate) await wait(150);
+
+  // Activate left connectors (from user/modern → Otto)
   for (const i of phase.connectors.left) {
     connLeft[i].classList.add('active');
     if (phase.flowClass) connLeft[i].classList.add(phase.flowClass);
@@ -825,7 +978,15 @@ async function showPhase(index, animate = true) {
     dotsLeft[i].classList.add('active');
   }
 
-  // Activate connectors (right)
+  // Activate modern nodes (left side)
+  for (const i of phase.modern) {
+    modernNodes[i].classList.add('active');
+    if (animate) await wait(150);
+  }
+
+  if (animate) await wait(200);
+
+  // Activate right connectors (Otto → legacy portals)
   for (const i of phase.connectors.right) {
     connRight[i].classList.add('active');
     if (phase.flowClass) connRight[i].classList.add(phase.flowClass);
@@ -837,33 +998,26 @@ async function showPhase(index, animate = true) {
     dotsRight[i].classList.add('active');
   }
 
-  // Activate modern nodes
-  for (const i of phase.modern) {
-    modernNodes[i].classList.add('active');
+  // Activate legacy portal nodes (right side)
+  for (const i of phase.legacy) {
+    legacyNodes[i].classList.add('active');
     if (animate) await wait(150);
   }
 
-  // Context icon
-  if (phase.ctx === 'user') {
-    $('#ctx-user').classList.add('active');
-  } else if (phase.ctx === 'schedule') {
-    $('#ctx-schedule').classList.add('active');
-  }
-
-  // Phase IV: glitch sequence
+  // Phase IV: glitch sequence on a legacy portal
   if (phase.glitchNode !== undefined && animate) {
     await wait(1500);
     const gi = phase.glitchNode;
     legacyNodes[gi].classList.add('glitch');
-    connLeft[gi].classList.add('glitch');
-    connLeft[gi].classList.remove('flowing');
+    connRight[gi].classList.add('glitch');
+    connRight[gi].classList.remove('flowing');
 
     await wait(2000);
 
     legacyNodes[gi].classList.remove('glitch');
     legacyNodes[gi].classList.add('repaired');
-    connLeft[gi].classList.remove('glitch');
-    connLeft[gi].classList.add('repaired');
+    connRight[gi].classList.remove('glitch');
+    connRight[gi].classList.add('repaired');
   }
 }
 
@@ -876,8 +1030,9 @@ async function playAll() {
     await showPhase(i, true);
     if (!playing) return;
 
-    // Wait before next phase (longer for phase IV glitch)
-    const delay = i === 3 ? 3000 : 5500;
+    // Wait before next phase
+    // Problem phase lingers longer; Phase IV has glitch animation
+    const delay = i === 0 ? 6500 : i === 4 ? 3000 : 5500;
     await wait(delay);
   }
 
