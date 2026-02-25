@@ -533,10 +533,24 @@ def run_javascript(
         result_value, result_type = _cdp_evaluate(driver, script, frame_context)
         elapsed = int((time.perf_counter() - start) * 1000)
 
+        # Empty-result guard: warn when result is surprising
+        warning = None
+        if result_value is None and _seems_like_computation(script):
+            warning = (
+                f"Warning: result is {result_type} but script appears to perform "
+                "non-trivial computation (DOM query, property read, collection "
+                "operation, variable assignment). The last statement may be a loop "
+                "or void expression whose completion value is undefined. Rewrite "
+                "so the final expression evaluates to the intended value — e.g., "
+                "end with a variable reference like `myResult;` rather than a "
+                "loop or forEach."
+            )
+
         js_result = JavaScriptResult(
             success=True,
             result=result_value,
             result_type=result_type,
+            warning=warning,
             elapsed_ms=elapsed,
         )
 

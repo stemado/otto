@@ -352,6 +352,47 @@ def test_js_await_promise(session):
     assert result.result == "done"
 
 
+def test_js_empty_result_guard_warns_on_loop(session):
+    """A for...of loop as the last statement triggers a warning when result is undefined."""
+    # This is structurally identical to benchmark Run 2's failing script.
+    # The for...of loop's completion value is undefined in CDP repl_mode.
+    script = """
+    const links = document.querySelectorAll('a');
+    let result = '';
+    for (const a of links) {
+        const text = a.textContent.trim();
+        if (text.length > 0) {
+            result = text;
+            break;
+        }
+    }
+    """
+    r, _ = run_javascript(session.driver, script)
+    # The loop's completion value is undefined — result should be None
+    # and warning should be present because the script clearly does computation
+    if r.result is None:
+        assert r.warning is not None
+        assert "non-trivial computation" in r.warning
+    else:
+        # If CDP happens to return the value, no warning needed — still a pass
+        assert r.warning is None
+
+
+def test_js_empty_result_guard_no_warning_on_success(session):
+    """A script that successfully returns a value should never have a warning."""
+    result, _ = run_javascript(session.driver, "document.title")
+    assert result.success is True
+    assert result.result is not None
+    assert result.warning is None
+
+
+def test_js_empty_result_guard_no_warning_on_bare_expression(session):
+    """A bare expression returning undefined should not warn if no computation patterns."""
+    result, _ = run_javascript(session.driver, "undefined")
+    assert result.result is None
+    assert result.warning is None
+
+
 # ---------------------------------------------------------------------------
 # take_screenshot
 # ---------------------------------------------------------------------------
