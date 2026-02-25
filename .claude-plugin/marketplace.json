@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "otto",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "source": "./",
       "description": "Stealth browser automation for websites with anti-detection",
       "keywords": ["browser", "automation", "anti-detection", "stealth", "botasaurus"]
