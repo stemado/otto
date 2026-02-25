@@ -397,6 +397,50 @@ def _try_constrained_input(target, selector: str, value: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Checkbox/radio checked-state detection for click warning suppression
+# ---------------------------------------------------------------------------
+# Clicking a checkbox or radio toggles the .checked property but produces
+# no structural DOM change (child count, title, aria-hidden are all unchanged).
+# This helper captures the checked state before/after a click so the
+# post-click heuristic can suppress the false-positive warning.
+# See docs/plans/2026-02-25-checkbox-radio-fingerprint-design.md
+# ---------------------------------------------------------------------------
+
+_CHECKED_STATE_JS = (
+    "return (function(sel) {"
+    "  var el = document.querySelector(sel);"
+    "  if (!el) return null;"
+    "  var tag = el.tagName.toLowerCase();"
+    "  var type = (el.type || '').toLowerCase();"
+    "  if (tag === 'input' && (type === 'checkbox' || type === 'radio')) {"
+    "    return el.checked;"
+    "  }"
+    "  var role = (el.getAttribute('role') || '').toLowerCase();"
+    "  if (role === 'checkbox' || role === 'radio') {"
+    "    return el.getAttribute('aria-checked') === 'true';"
+    "  }"
+    "  return null;"
+    "})(%s)"
+)
+
+
+def _capture_checked_state(target, selector: str):
+    """Capture checked state of a checkbox/radio element.
+
+    Returns True/False if the element is checkable, None otherwise.
+    Returns None on any error (safe degradation to existing behavior).
+    """
+    try:
+        result = target.run_js(_CHECKED_STATE_JS % json.dumps(selector))
+        # run_js returns Python None for JS null, bool for JS bool
+        if result is None:
+            return None
+        return bool(result)
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Submit element detection for enhanced click warning
 # ---------------------------------------------------------------------------
 
