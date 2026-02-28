@@ -146,3 +146,49 @@ def test_raises_timeout_when_no_code_arrives():
             asyncio.run(
                 poll_for_otp("ACtest", "authtest", "14155551234", "paycom", timeout=0.5)
             )
+
+
+# ---------------------------------------------------------------------------
+# Input normalization and escaping
+# ---------------------------------------------------------------------------
+
+def test_app_keyword_with_regex_metacharacters():
+    """Keywords containing regex metacharacters are treated as literals."""
+    baseline = _twilio_resp()
+    poll1 = _twilio_resp(_msg("msg001", "123456 is your C++ Academy verification code"))
+    client = _mock_client(baseline, poll1)
+
+    with (
+        patch("otto.otp.httpx.AsyncClient", return_value=client),
+        patch("otto.otp.asyncio.sleep", new_callable=AsyncMock),
+    ):
+        result = asyncio.run(
+            poll_for_otp("ACtest", "authtest", "14155551234", "C++", timeout=10)
+        )
+
+    assert result == "123456"
+
+
+def test_phone_number_with_formatting_is_normalized():
+    """Phone numbers with non-digit characters are stripped to digits-only."""
+    baseline = _twilio_resp()
+    poll1 = _twilio_resp(_msg("msg001", "847291 is your Paycom code"))
+    client = _mock_client(baseline, poll1)
+
+    with (
+        patch("otto.otp.httpx.AsyncClient", return_value=client),
+        patch("otto.otp.asyncio.sleep", new_callable=AsyncMock),
+    ):
+        result = asyncio.run(
+            poll_for_otp("ACtest", "authtest", "+1-415-555-1234", "paycom", timeout=10)
+        )
+
+    assert result == "847291"
+
+
+def test_empty_phone_number_raises_value_error():
+    """Phone number with no digits raises ValueError before any HTTP call."""
+    with pytest.raises(ValueError):
+        asyncio.run(
+            poll_for_otp("ACtest", "authtest", "+++", "paycom", timeout=10)
+        )
