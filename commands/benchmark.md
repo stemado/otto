@@ -38,6 +38,9 @@ If not detectable from context, use AskUserQuestion:
 1. Glob `docs/plans/benchmarks/benchmark-results-v*.md` to find existing results files
 2. Parse the version numbers (e.g., `v0.1`, `v0.2`) from the filenames
 3. Increment the highest minor version by 0.1 (v0.2 → v0.3)
+   Version numbers use a single decimal digit for the minor part (v0.1 through v0.9).
+   At v0.9, increment to v1.0. Always format the version as `vMAJOR.MINOR` with exactly
+   one decimal digit (e.g., `v0.3`, `v1.0`, never `v0.10`).
 4. If the user provided a version argument to the command, use that instead
 
 If no existing results files are found, default to `v0.1`.
@@ -101,7 +104,8 @@ METHODOLOGY — follow in exact order:
    execute_javascript, get_session_history itself, etc.
 
 5. Call `close_session`. Record the exact value of `session_duration_seconds`
-   from the response JSON.
+   from the response JSON — this is what goes into the `wall_clock_seconds` field
+   of your JSON return below.
 
 6. Check: does your extracted output contain this exact substring?
    [expected_output_contains]
@@ -156,6 +160,10 @@ note that in the comparison section.
 Write `docs/plans/benchmarks/benchmark-results-[version].md` using this template.
 Fill in all bracketed values from the data collected above.
 
+**Note on run count:** The template below shows 3 run columns. If `runs_per_task`
+differs from 3, adjust the table headers and data columns to match the actual
+run count — add or remove "Run N" columns as needed. The Mean column is always last.
+
 ```
 # Otto Benchmark Results — [VERSION]
 
@@ -188,7 +196,11 @@ JSONL context delta analysis per the v0.1 methodology.
 ## Task [ID]: [Name]
 
 **Target:** `[target_url]`
-**Instruction:** [full canonical instruction text from tasks.yaml]
+**Instruction:** [If single-line: write inline. If multi-line (like T2's bulleted list),
+write as a markdown blockquote — prefix each line with `> `. Example:
+> Navigate to httpbin.org/forms/post. Fill in the form with the following values:
+> - Customer name: "Otto Benchmark"
+> ...]
 
 ```
                     Run 1       Run 2       Run 3       Mean
