@@ -49,14 +49,16 @@ async def poll_for_otp(
         TimeoutError: No matching code received within timeout seconds.
         httpx.HTTPStatusError: Twilio API returned an error status.
     """
-    # Normalize phone number — strip any leading + so %2B isn't doubled in the URL.
-    # Users commonly copy numbers with a + prefix from Twilio console or contact apps.
-    phone_number = phone_number.lstrip("+")
+    # Normalize phone number — strip all non-digit characters so users can
+    # paste numbers in any format (+1-415-555-1234, (415) 555-1234, etc.)
+    phone_number = re.sub(r"[^\d]", "", phone_number)
+    if not phone_number:
+        raise ValueError("phone_number must contain at least one digit")
     url = _TWILIO_MESSAGES_URL.format(
         account_sid=account_sid,
         phone_number=phone_number,
     )
-    keyword_re = re.compile(app_keyword, re.IGNORECASE)
+    keyword_re = re.compile(re.escape(app_keyword), re.IGNORECASE)
     code_re = re.compile(code_pattern)
     deadline = _monotonic() + timeout
 
