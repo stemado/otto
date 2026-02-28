@@ -140,7 +140,7 @@ def test_raises_timeout_when_no_code_arrives():
     with (
         patch("otto.otp.httpx.AsyncClient", return_value=client),
         patch("otto.otp.asyncio.sleep", new_callable=AsyncMock),
-        patch("otto.otp.time.monotonic", side_effect=fake_monotonic),
+        patch("otto.otp._monotonic", side_effect=fake_monotonic),
     ):
         with pytest.raises(TimeoutError, match="paycom"):
             asyncio.run(
