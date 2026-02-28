@@ -33,6 +33,7 @@ from .models import (
     SessionInfo,
 )
 from .credential_resolver import CredentialResolver, CredentialSource
+from .otp import poll_for_otp
 from .secrets import EnvLoadError, load_env_vars
 from .sanitize import sanitize_response
 from .scout import build_element_summary, filter_elements, scout_page
@@ -925,6 +926,58 @@ async def get_session_history(
         f"{len(history.scouts)} scouts, {len(history.network_events)} network events"
     )
     return session.scrub_secrets(sanitize_response(history.model_dump(exclude_none=True)))
+
+
+# --- Tool: get_2fa_code ---
+
+
+@mcp.tool()
+async def get_2fa_code(
+    app_keyword: str,
+    code_pattern: str = r"\d{6}",
+    timeout: int = 60,
+    ctx: Context[ServerSession, AppContext] = None,
+) -> str:
+    """Fetch a 2FA OTP code from Twilio SMS — call this AFTER clicking 'Send Code'.
+
+    Polls the Twilio Messages API until a new SMS matching app_keyword arrives,
+    then extracts and returns the OTP code. Twilio credentials are read from
+    vault or .env and never exposed in tool responses.
+
+    Call this tool AFTER triggering the 2FA send in the browser. The baseline
+    inbox state is captured at call time; Twilio delivery latency (2-10s) gives
+    sufficient buffer before the first poll.
+
+    Args:
+        app_keyword: Case-insensitive keyword to match in the SMS body.
+                     Use the site name, e.g. 'paycom', 'chase', 'google'.
+        code_pattern: Regex to extract the OTP. Default: 6-digit number.
+                      Override for 8-digit or alphanumeric codes.
+        timeout: Seconds to wait for the code before giving up. Default: 60.
+
+    Required .env / vault entries:
+        TWILIO_ACCOUNT_SID  — Twilio Account SID
+        TWILIO_AUTH_TOKEN   — Twilio Auth Token
+        TWILIO_PHONE_NUMBER — Digits-only recipient number (e.g. 14155551234)
+    """
+    app_ctx = _get_ctx(ctx)
+
+    try:
+        resolver = _get_resolver(app_ctx)
+        account_sid = resolver.get("TWILIO_ACCOUNT_SID")
+        auth_token = resolver.get("TWILIO_AUTH_TOKEN")
+        phone_number = resolver.get("TWILIO_PHONE_NUMBER")
+    except KeyError as exc:
+        raise ValueError(str(exc)) from exc
+
+    return await poll_for_otp(
+        account_sid=account_sid,
+        auth_token=auth_token,
+        phone_number=phone_number,
+        app_keyword=app_keyword,
+        code_pattern=code_pattern,
+        timeout=float(timeout),
+    )
 
 
 # --- Tool: close_session ---
