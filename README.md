@@ -33,6 +33,7 @@ Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. 
 | **Credential scrubbing** | Automatic in all output | No | No | No |
 | **Video recording** | CDP screencast to MP4 | No | No | Built-in |
 | **Dependency pre-checks** | SessionStart hook | No | No | No |
+| **Hot Takeover** | Attach to a paused workflow's live browser, debug interactively, resume | No | No | No |
 | **Best for** | Enterprise systems without APIs | Testing your own app | Interactive debugging | Cross-browser test suites |
 
 ## Benchmarks
@@ -125,8 +126,8 @@ Then restart Claude Code to pick up the new version.
 
 ### What gets installed
 
-- **12 MCP tools** for browser automation (scout, click, type, monitor network, record video, etc.)
-- **3 slash commands** -- `/scout <url>`, `/export-workflow [name]`, and `/report [bug|feature|friction]`
+- **15 MCP tools** for browser automation (scout, click, type, monitor network, record video, attach to running sessions, etc.)
+- **5 slash commands** -- `/scout`, `/export-workflow`, `/report`, `/attach`, and `/resume`
 - **1 skill** -- Otto responds to phrases like "automate this site", "scout this page", "build a bot"
 - **1 hook** -- SessionStart dependency check (verifies Python, Node.js, Chrome on every session)
 - Python dependencies (`botasaurus-driver`, `mcp`, `pydantic`, `python-dotenv`) are installed automatically by `uv` on first run
@@ -210,21 +211,74 @@ workflow-run workflows/my-workflow.json --headless   # run without a visible bro
 
 Each step emits a JSON log line to stdout. Exit codes: `0` success, `1` step failure, `2` validation error.
 
+### Hot Takeover
+
+When a workflow running in [otto-engine](https://github.com/stemado/otto-engine) hits an error or a planned handoff point, the browser stays alive and the engine pauses. Hot Takeover lets you attach to that live browser session from Claude Code, interact with the page using all of Otto's tools, then hand control back to the engine.
+
+```
+Engine runs workflow --> step fails --> engine pauses, browser stays alive
+         |
+    /attach <execution_id>
+         |
+    You're in: scout, click, type, inspect -- fix the problem
+         |
+    /resume retry
+         |
+    Engine retakes control and continues the workflow
+```
+
+Three conditions trigger a pause:
+
+| Trigger | How | Use case |
+|---|---|---|
+| **Handoff step** | Add `"action": "handoff"` to a workflow step | Planned takeover point -- a complex form needs human judgment |
+| **Pause on error** | Set `"pause_on_error": true` in workflow settings | Debug failures interactively instead of just failing |
+| **External pause** | `POST /api/executions/{id}/pause` | Pause on-demand while watching a run |
+
+#### `/attach [execution_id]`
+
+Connect to a paused otto-engine execution's live browser. Otto discovers the CDP connection, attaches without killing or relaunching Chrome, and auto-scouts the page so you can see exactly where the workflow stopped and why.
+
+```
+/attach                         # lists running executions, asks which to attach
+/attach abc-123-def             # attaches directly to a specific execution
+```
+
+Once attached, all Otto tools work normally -- `scout_page_tool`, `find_elements`, `execute_action`, `take_screenshot`, `monitor_network`, etc. The browser retains all cookies, session state, and page context from the engine's workflow.
+
+#### `/resume <action>`
+
+Hand control back to the engine. The CDP connection is dropped (Chrome stays alive) and the engine's executor thread unblocks.
+
+```
+/resume retry                   # re-execute the step that failed
+/resume continue                # skip the failed step, advance to next
+/resume abort                   # terminate the execution
+/resume jump 5                  # jump to step index 5 (0-based)
+```
+
+#### Safety guarantees
+
+- **30-minute timeout** -- a forgotten pause auto-aborts to prevent leaked browser processes
+- **No infinite pause loops** -- if a retried step fails again, normal `on_error` policy applies (no second pause)
+- **Engine owns Chrome** -- Otto borrows the CDP connection but never kills the browser process
+
 ## MCP Tools
 
-Otto exposes 12 tools via MCP, organized by function:
+Otto exposes 15 tools via MCP, organized by function:
 
-**Session lifecycle** -- `launch_session` . `close_session` . `get_session_history`
+**Session lifecycle** -- `launch_session` . `attach_session` . `close_session` . `get_session_history`
 
 **Reconnaissance** -- `scout_page_tool` . `find_elements` . `inspect_element` . `take_screenshot`
 
 **Interaction** -- `execute_action_tool` . `fill_secret` . `execute_javascript`
 
-**Observation** -- `monitor_network` . `record_video`
+**Observation** -- `monitor_network` . `process_download` . `record_video` . `get_2fa_code`
 
 | Tool | Purpose |
 |------|---------|
 | `launch_session` | Open a browser session with optional URL, proxy, and headless mode |
+| `attach_session` | Connect to an existing Chrome via CDP (Hot Takeover) |
 | `scout_page_tool` | Structural page overview: metadata, iframes, shadow DOM, element counts |
 | `find_elements` | Search for interactive elements by text, type, or CSS selector |
 | `execute_action_tool` | Perform a single action: click, type, select, navigate, scroll, hover |
@@ -233,7 +287,9 @@ Otto exposes 12 tools via MCP, organized by function:
 | `take_screenshot` | Capture a screenshot for Claude to inspect visually |
 | `inspect_element` | Deep-inspect a DOM element: visibility, overlays, shadow DOM, ARIA |
 | `monitor_network` | Capture network traffic, filter by URL pattern, wait for downloads |
+| `process_download` | Convert and rename downloaded files (e.g., SpreadsheetML to CSV) |
 | `record_video` | Record the browser screen to MP4 via CDP screencast |
+| `get_2fa_code` | Retrieve a 2FA OTP code from Twilio SMS |
 | `get_session_history` | Retrieve the full structured action history of the session |
 | `close_session` | Close the browser and release resources |
 
