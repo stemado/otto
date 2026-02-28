@@ -567,10 +567,11 @@ wheels = [
 
 [[package]]
 name = "otto"
-version = "0.7.0"
+version = "0.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "botasaurus-driver" },
+    { name = "httpx" },
     { name = "mcp", extra = ["cli"] },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -594,6 +595,7 @@ dev = [
 requires-dist = [
     { name = "botasaurus-driver", specifier = ">=4.0.0" },
     { name = "cryptography", marker = "extra == 'vault'", specifier = ">=43.0.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "imageio-ffmpeg", marker = "extra == 'video'", specifier = ">=0.5.1" },
     { name = "keyring", marker = "extra == 'vault'", specifier = ">=25.0.0" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.0.0" },
