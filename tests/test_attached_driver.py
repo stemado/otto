@@ -10,10 +10,10 @@ from botasaurus_driver.core.browser import Browser
 from botasaurus_driver.core.config import Config
 
 
-def test_browser_has_create_chrome_with_retries():
-    """AttachedBrowser overrides this — it must exist and be callable."""
-    assert hasattr(Browser, "create_chrome_with_retries")
-    assert callable(getattr(Browser, "create_chrome_with_retries"))
+def test_browser_has_start_method():
+    """AttachedBrowser overrides start() — it must exist and be callable."""
+    assert hasattr(Browser, "start")
+    assert callable(getattr(Browser, "start"))
 
 
 def test_browser_close_calls_discrete_connection_methods():
@@ -38,6 +38,17 @@ def test_browser_has_websocket_url_property():
     """We read websocket_url to confirm connectivity."""
     assert hasattr(Browser, "websocket_url")
     assert isinstance(getattr(Browser, "websocket_url"), property)
+
+
+def test_browser_has_update_targets():
+    """AttachedBrowser.start() calls update_targets() for tab discovery."""
+    assert hasattr(Browser, "update_targets")
+    assert callable(getattr(Browser, "update_targets"))
+
+
+def test_browser_has_handle_target_update():
+    """AttachedBrowser.start() registers _handle_target_update as CDP handler."""
+    assert hasattr(Browser, "_handle_target_update")
 
 
 def test_attached_browser_inherits_browser():

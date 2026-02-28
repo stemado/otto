@@ -16,30 +16,61 @@ from botasaurus_driver import Driver
 from botasaurus_driver.core.browser import Browser, Connection
 from botasaurus_driver.core.config import Config
 from botasaurus_driver.core import util
+from botasaurus_driver import cdp
 
 
 class AttachedBrowser(Browser):
     """A Browser that attaches to an already-running Chrome process.
 
-    Overrides two methods:
-    - ``create_chrome_with_retries`` — polls ``/json/version`` instead of
-      launching a subprocess.
-    - ``close`` — tears down CDP connections without killing the Chrome
-      process (the engine still owns it).
+    Overrides ``start()`` instead of just ``create_chrome_with_retries``
+    because the parent's ``start()`` assumes a subprocess exists after
+    creation (accesses ``self._process.pid``).  We skip process management
+    entirely and wire up only the CDP connection and target discovery.
     """
 
-    def create_chrome_with_retries(self, exe, params):
-        """Connect to an existing Chrome instead of launching one.
+    def start(self) -> "Browser":
+        """Connect to an existing Chrome and set up CDP.
 
-        *exe* and *params* are ignored — they describe the binary that
-        ``Browser.start()`` would normally launch.  We skip all of that
-        and just poll the debug endpoint.
+        Replaces the parent ``start()`` to avoid:
+        - launching a subprocess (we poll ``/json/version`` instead)
+        - accessing ``self._process.pid`` (no process to own)
+        - cleaning up profile directories (engine owns the profile)
         """
+        self.config.host = self.config.host or "127.0.0.1"
+
+        # Poll the existing Chrome's debug endpoint.
         chrome_url = f"http://{self.config.host}:{self.config.port}/json/version"
         self.info = _poll_chrome(chrome_url, timeout=10)
-        # No subprocess — leave _process as None so close() won't try
-        # to terminate anything.
         self._process = None
+        self._process_pid = None
+
+        # Wire up the CDP browser-level connection.
+        self.connection = Connection(self.info["webSocketDebuggerUrl"], _owner=self)
+
+        self.connection.handlers[cdp.target.TargetInfoChanged] = [
+            self._handle_target_update
+        ]
+        self.connection.handlers[cdp.target.TargetCreated] = [
+            self._handle_target_update
+        ]
+        self.connection.handlers[cdp.target.TargetDestroyed] = [
+            self._handle_target_update
+        ]
+        self.connection.handlers[cdp.target.TargetCrashed] = [
+            self._handle_target_update
+        ]
+
+        # Register so botasaurus can track us (we deregister in close).
+        instances = util.get_registered_instances()
+        instances.add(self)
+
+        # Discover existing targets (tabs) in the running Chrome.
+        self.connection.send(
+            cdp.target.set_discover_targets(discover=True),
+            wait_for_response=False,
+        )
+        self.update_targets()
+        return self
 
     def close(self):
         """Close CDP connections only — never kill Chrome."""
@@ -106,5 +137,5 @@ def _poll_chrome(url: str, timeout: float = 10) -> dict:
 def _start_attached(config: Config) -> AttachedBrowser:
     """Create an AttachedBrowser and connect it to the running Chrome."""
     browser = AttachedBrowser(config)
-    browser.start()  # calls our overridden create_chrome_with_retries
+    browser.start()  # calls our overridden start()
     return browser
