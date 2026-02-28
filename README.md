@@ -35,6 +35,25 @@ Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. 
 | **Dependency pre-checks** | SessionStart hook | No | No | No |
 | **Best for** | Enterprise systems without APIs | Testing your own app | Interactive debugging | Cross-browser test suites |
 
+## Benchmarks
+
+Otto's compact scout reports and targeted extraction use dramatically fewer tokens than full-page snapshot approaches.
+
+| Task | Otto | Playwright MCP | Reduction |
+| --- | --- | --- | --- |
+| **Fact lookup** (Wikipedia) | 1,264 tokens / 4 tool calls | ~124,000 tokens / 1 tool call | **98× fewer** |
+| **Form fill** (httpbin) | 3,799 tokens / 11 tool calls | ~124,000+ tokens | **33× fewer** |
+
+Wall-clock: **2.2 s** (fact lookup) · **8.2 s** (form fill) on Sonnet 4.6 — **100% success rate**, zero retries across 6 runs.
+
+> Full methodology, run-by-run data, and model comparison → **[Benchmark results](https://stemado.github.io/otto/benchmarks.html)**
+
+<p align="center">
+  <a href="https://stemado.github.io/otto/benchmarks.html">
+    <img src="https://img.shields.io/badge/benchmarks-98×_fewer_tokens-f97316?style=for-the-badge" alt="Benchmarks: 98× fewer tokens">
+  </a>
+</p>
+
 ## The Problem
 
 Enterprise portals are tough terrain for automation. The login form lives inside a triple-nested iframe. The export button triggers an XHR that returns a signed URL instead of a file. The page uses dynamic selectors that change between deployments.

@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Otto — Benchmark Results</title>
+<meta name="description" content="Otto uses 98× fewer tokens than Playwright MCP for browser automation tasks. Full benchmark data, methodology, and model comparison.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #080b14;
+    --surface: #111827;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --dim: #334155;
+    --otto: #f97316;
+    --otto-glow: rgba(249, 115, 22, 0.15);
+    --green: #34d399;
+    --red: #f87171;
+    --yellow: #fbbf24;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --sans: 'DM Sans', -apple-system, sans-serif;
+  }
+
+  html {
+    font-size: 15px;
+    line-height: 1.55;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    background-image: radial-gradient(circle, rgba(30, 41, 59, 0.35) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Atmospheric gradient overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(249, 115, 22, 0.025) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(56, 189, 248, 0.02) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 50%, rgba(100, 116, 139, 0.03) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Page Layout ── */
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 64px 24px 80px;
+  }
+
+  /* ── Section Dividers ── */
+  .section {
+    margin-top: 80px;
+  }
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+    margin-bottom: 48px;
+  }
+  .section-label {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.65rem;
+    color: var(--otto);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 1.8rem;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .section-subtitle {
+    font-family: var(--sans);
+    font-weight: 300;
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 640px;
+  }
+
+  /* ══════════════════════════════════════════
+     HEADER
+     ══════════════════════════════════════════ */
+  .header {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+  .header .section-label {
+    margin-bottom: 16px;
+  }
+  .header .section-title {
+    font-size: 2rem;
+  }
+  .header .section-title em {
+    font-style: italic;
+    color: var(--otto);
+  }
+  .header .section-subtitle {
+    max-width: 560px;
+    margin: 12px auto 0;
+  }
+
+  /* ══════════════════════════════════════════
+     HERO STATS — 4-card grid
+     ══════════════════════════════════════════ */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 48px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px 20px;
+    text-align: center;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  .stat-card:hover {
+    border-color: var(--dim);
+    box-shadow: 0 0 24px rgba(249, 115, 22, 0.04);
+  }
+  .stat-number {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 2.8rem;
+    color: var(--otto);
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+  .stat-suffix {
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--otto);
+  }
+  .stat-unit {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 8px;
+  }
+
+  /* ══════════════════════════════════════════
+     TOKEN COMPARISON — proportional bars
+     ══════════════════════════════════════════ */
+  .comparison-block {
+    margin-top: 40px;
+  }
+  .comparison-label {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  .bar-group {
+    margin-bottom: 32px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .bar-label {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--muted);
+    width: 100px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .bar-track {
+    flex: 1;
+    height: 32px;
+    background: rgba(30, 41, 59, 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 0;
+  }
+  .bar-fill.playwright {
+    background: linear-gradient(90deg, var(--red), rgba(248, 113, 113, 0.6));
+    width: 0;
+  }
+  .bar-fill.otto {
+    background: linear-gradient(90deg, var(--otto), rgba(249, 115, 22, 0.8));
+    width: 0;
+  }
+  .bar-fill.visible.playwright { /* targets set via JS */ }
+  .bar-fill.visible.otto { /* targets set via JS */ }
+  .bar-value {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.7rem;
+    color: var(--text);
+    white-space: nowrap;
+    padding: 0 10px;
+  }
+  /* When bar is too small to contain text, show it outside */
+  .bar-value-outside {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.7rem;
+    color: var(--muted);
+    white-space: nowrap;
+    margin-left: 8px;
+    flex-shrink: 0;
+  }
+  .ratio-callout {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--otto);
+    margin-top: 4px;
+    margin-left: 112px;
+  }
+
+  /* ══════════════════════════════════════════
+     TASK DETAIL CARDS
+     ══════════════════════════════════════════ */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-top: 40px;
+  }
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+  }
+  .detail-card-title {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .detail-card-url {
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+    word-break: break-all;
+  }
+
+  /* Run tables */
+  .run-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    margin-bottom: 20px;
+  }
+  .run-table th {
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.65rem;
+    text-align: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .run-table th:first-child {
+    text-align: left;
+  }
+  .run-table td {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid rgba(30, 41, 59, 0.4);
+    color: var(--text);
+  }
+  .run-table td:first-child {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .run-table tr.mean-row td {
+    color: var(--otto);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  .run-table .success {
+    color: var(--green);
+  }
+
+  /* Tool breakdown */
+  .tool-breakdown-title {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .tool-step {
+    display: flex;
+    gap: 8px;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .tool-step-num {
+    color: var(--dim);
+    font-weight: 600;
+    flex-shrink: 0;
+    width: 18px;
+    text-align: right;
+  }
+  .tool-step-name {
+    color: var(--otto);
+    font-weight: 500;
+  }
+  .tool-step-desc {
+    color: var(--muted);
+  }
+
+  /* ══════════════════════════════════════════
+     MODEL COMPARISON
+     ══════════════════════════════════════════ */
+  .model-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0;
+    align-items: center;
+    margin-top: 40px;
+  }
+  .model-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px 24px;
+    text-align: center;
+  }
+  .model-card.preferred {
+    border-color: var(--otto);
+    box-shadow: 0 0 24px var(--otto-glow);
+  }
+  .model-name {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  .model-name .badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--otto);
+    border: 1px solid var(--otto);
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    vertical-align: middle;
+  }
+  .model-stats {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+  }
+  .model-stat {
+    text-align: center;
+  }
+  .model-stat-value {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .model-card.preferred .model-stat-value {
+    color: var(--otto);
+  }
+  .model-stat-label {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+  .model-callout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+  }
+  .model-callout-number {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--otto);
+  }
+  .model-callout-label {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .model-note {
+    font-family: var(--sans);
+    font-weight: 300;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 20px;
+    line-height: 1.6;
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ══════════════════════════════════════════
+     METHODOLOGY
+     ══════════════════════════════════════════ */
+  .methodology-content {
+    margin-top: 24px;
+    font-family: var(--sans);
+    font-weight: 300;
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 720px;
+  }
+  .methodology-content dt {
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 16px;
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+  }
+  .methodology-content dt:first-child {
+    margin-top: 0;
+  }
+  .methodology-content dd {
+    margin-left: 0;
+    margin-bottom: 8px;
+  }
+
+  /* ══════════════════════════════════════════
+     FOOTER
+     ══════════════════════════════════════════ */
+  .footer {
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .footer a {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  .footer a:hover {
+    color: var(--otto);
+  }
+  .footer-links {
+    display: flex;
+    gap: 20px;
+  }
+  .back-to-top {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.78rem;
+    transition: color 0.2s ease;
+  }
+  .back-to-top:hover {
+    color: var(--otto);
+  }
+
+  /* ══════════════════════════════════════════
+     RESPONSIVE
+     ══════════════════════════════════════════ */
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .detail-grid {
+      grid-template-columns: 1fr;
+    }
+    .model-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .model-callout {
+      flex-direction: row;
+      gap: 8px;
+      padding: 8px 0;
+    }
+    .bar-label {
+      width: 80px;
+      font-size: 0.7rem;
+    }
+    .ratio-callout {
+      margin-left: 92px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .page {
+      padding: 32px 16px 60px;
+    }
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    .stat-number {
+      font-size: 2.2rem;
+    }
+    .header .section-title {
+      font-size: 1.5rem;
+    }
+    .section-title {
+      font-size: 1.4rem;
+    }
+    .bar-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .bar-label {
+      text-align: left;
+      width: auto;
+    }
+    .ratio-callout {
+      margin-left: 0;
+    }
+    .footer {
+      flex-direction: column;
+      gap: 12px;
+      text-align: center;
+    }
+    .run-table {
+      display: block;
+      overflow-x: auto;
+    }
+  }
+
+  /* ── Utility ── */
+  a { color: var(--otto); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="page" id="top">
+
+  <!-- ══════ HEADER ══════ -->
+  <header class="header">
+    <div class="section-label">Benchmarks</div>
+    <h1 class="section-title">Every <em>token</em> counts.</h1>
+    <p class="section-subtitle">
+      Measured on Claude Sonnet 4.6 · February 2026 · Per-turn JSONL token analysis with wall-clock from session duration
+    </p>
+  </header>
+
+  <!-- ══════ HERO STATS ══════ -->
+  <div class="stats-grid" id="stats">
+    <div class="stat-card">
+      <div class="stat-number"><span data-target="98" data-decimals="0">0</span><span class="stat-suffix">×</span></div>
+      <div class="stat-unit">fewer tokens</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number"><span data-target="33" data-decimals="0">0</span><span class="stat-suffix">×</span></div>
+      <div class="stat-unit">fewer tokens</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number"><span data-target="2.2" data-decimals="1">0</span><span class="stat-suffix">s</span></div>
+      <div class="stat-unit">wall-clock</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number"><span data-target="100" data-decimals="0">0</span><span class="stat-suffix">%</span></div>
+      <div class="stat-unit">success rate</div>
+    </div>
+  </div>
+
+  <!-- ══════ TOKEN COMPARISON — proportional bars ══════ -->
+  <div class="section" id="tokens">
+    <div class="section-divider"></div>
+    <div class="section-label">Token efficiency</div>
+    <h2 class="section-title">The gap is structural.</h2>
+    <p class="section-subtitle">
+      Playwright MCP snapshots the entire page on every tool call. Otto scouts selectively and extracts only what's needed.
+    </p>
+
+    <!-- Task 1: Fact Lookup -->
+    <div class="comparison-block" id="bars-t1">
+      <div class="comparison-label">Task 1 — Wikipedia article extraction</div>
+      <div class="bar-group">
+        <div class="bar-row">
+          <span class="bar-label">Playwright</span>
+          <div class="bar-track">
+            <div class="bar-fill playwright" data-width="100" style="justify-content: flex-end;">
+              <span class="bar-value">~124,000 tokens</span>
+            </div>
+          </div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Otto</span>
+          <div class="bar-track">
+            <div class="bar-fill otto" data-width="1.02"></div>
+          </div>
+          <span class="bar-value-outside">1,264 tokens</span>
+        </div>
+        <div class="ratio-callout">98× fewer</div>
+      </div>
+    </div>
+
+    <!-- Task 2: Form Fill -->
+    <div class="comparison-block" id="bars-t2">
+      <div class="comparison-label">Task 2 — Form fill + response verification</div>
+      <div class="bar-group">
+        <div class="bar-row">
+          <span class="bar-label">Playwright</span>
+          <div class="bar-track">
+            <div class="bar-fill playwright" data-width="100" style="justify-content: flex-end;">
+              <span class="bar-value">~124,000+ tokens</span>
+            </div>
+          </div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Otto</span>
+          <div class="bar-track">
+            <div class="bar-fill otto" data-width="3.06"></div>
+          </div>
+          <span class="bar-value-outside">3,799 tokens</span>
+        </div>
+        <div class="ratio-callout">33× fewer</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ TASK DETAILS ══════ -->
+  <div class="section" id="details">
+    <div class="section-divider"></div>
+    <div class="section-label">Run data</div>
+    <h2 class="section-title">Consistent across every run.</h2>
+    <p class="section-subtitle">
+      Three runs per task, zero retries. Tool call sequences were identical in every run.
+    </p>
+
+    <div class="detail-grid">
+      <!-- Task 1 Detail -->
+      <div class="detail-card">
+        <div class="detail-card-title">Task 1: Fact Lookup</div>
+        <div class="detail-card-url">en.wikipedia.org/wiki/Python_(programming_language)</div>
+        <table class="run-table">
+          <thead>
+            <tr><th></th><th>Run 1</th><th>Run 2</th><th>Run 3</th><th>Mean</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Wall-clock</td><td>2.5 s</td><td>2.0 s</td><td>2.0 s</td><td class="">2.2 s</td></tr>
+            <tr><td>Tool calls</td><td>4</td><td>4</td><td>4</td><td>4</td></tr>
+            <tr><td>Success</td><td class="success">Yes</td><td class="success">Yes</td><td class="success">Yes</td><td class="success">3/3</td></tr>
+            <tr><td>Retries</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+          </tbody>
+        </table>
+        <div class="tool-breakdown-title">Tool call breakdown</div>
+        <div class="tool-step"><span class="tool-step-num">1.</span> <span class="tool-step-name">launch_session</span> <span class="tool-step-desc">— open browser, navigate to URL</span></div>
+        <div class="tool-step"><span class="tool-step-num">2.</span> <span class="tool-step-name">scout_page_tool</span> <span class="tool-step-desc">— structural overview (summary mode)</span></div>
+        <div class="tool-step"><span class="tool-step-num">3.</span> <span class="tool-step-name">execute_javascript</span> <span class="tool-step-desc">— extract first paragraph text</span></div>
+        <div class="tool-step"><span class="tool-step-num">4.</span> <span class="tool-step-name">close_session</span> <span class="tool-step-desc">— release browser</span></div>
+      </div>
+
+      <!-- Task 2 Detail -->
+      <div class="detail-card">
+        <div class="detail-card-title">Task 2: Form Fill</div>
+        <div class="detail-card-url">httpbin.org/forms/post</div>
+        <table class="run-table">
+          <thead>
+            <tr><th></th><th>Run 1</th><th>Run 2</th><th>Run 3</th><th>Mean</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Wall-clock</td><td>8.1 s</td><td>8.2 s</td><td>8.35 s</td><td>8.2 s</td></tr>
+            <tr><td>Tool calls</td><td>11</td><td>11</td><td>11</td><td>11</td></tr>
+            <tr><td>Success</td><td class="success">Yes</td><td class="success">Yes</td><td class="success">Yes</td><td class="success">3/3</td></tr>
+            <tr><td>Retries</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+          </tbody>
+        </table>
+        <div class="tool-breakdown-title">Tool call breakdown</div>
+        <div class="tool-step"><span class="tool-step-num">1.</span> <span class="tool-step-name">launch_session</span> <span class="tool-step-desc">— open browser, navigate</span></div>
+        <div class="tool-step"><span class="tool-step-num">2.</span> <span class="tool-step-name">scout_page_tool</span> <span class="tool-step-desc">— structural overview</span></div>
+        <div class="tool-step"><span class="tool-step-num">3–8.</span> <span class="tool-step-name">execute_action_tool</span> <span class="tool-step-desc">— type name, tel, email; click size, topping; type comments</span></div>
+        <div class="tool-step"><span class="tool-step-num">9.</span> <span class="tool-step-name">execute_javascript</span> <span class="tool-step-desc">— set delivery time + submit form</span></div>
+        <div class="tool-step"><span class="tool-step-num">10.</span> <span class="tool-step-name">execute_javascript</span> <span class="tool-step-desc">— extract echo response</span></div>
+        <div class="tool-step"><span class="tool-step-num">11.</span> <span class="tool-step-name">close_session</span> <span class="tool-step-desc">— release browser</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ MODEL COMPARISON ══════ -->
+  <div class="section" id="models">
+    <div class="section-divider"></div>
+    <div class="section-label">Model comparison</div>
+    <h2 class="section-title">Same tools, different speed.</h2>
+    <p class="section-subtitle">
+      Token efficiency is model-independent — identical tool responses regardless of model. Wall-clock time is where models differ.
+    </p>
+
+    <div class="model-grid">
+      <div class="model-card">
+        <div class="model-name">Opus 4.6</div>
+        <div class="model-stats">
+          <div class="model-stat">
+            <div class="model-stat-value">10.4s</div>
+            <div class="model-stat-label">Fact lookup</div>
+          </div>
+          <div class="model-stat">
+            <div class="model-stat-value">38.0s</div>
+            <div class="model-stat-label">Form fill</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="model-callout">
+        <div class="model-callout-number">4.7×</div>
+        <div class="model-callout-label">faster</div>
+      </div>
+
+      <div class="model-card preferred">
+        <div class="model-name">Sonnet 4.6 <span class="badge">Recommended</span></div>
+        <div class="model-stats">
+          <div class="model-stat">
+            <div class="model-stat-value">2.2s</div>
+            <div class="model-stat-label">Fact lookup</div>
+          </div>
+          <div class="model-stat">
+            <div class="model-stat-value">8.2s</div>
+            <div class="model-stat-label">Form fill</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="model-note">
+      Token efficiency is model-independent — identical tool responses regardless of model.
+      Sonnet is recommended for automation workflows where speed matters.
+    </p>
+  </div>
+
+  <!-- ══════ METHODOLOGY ══════ -->
+  <div class="section" id="methodology">
+    <div class="section-divider"></div>
+    <div class="section-label">Methodology</div>
+    <h2 class="section-title">How we measured.</h2>
+
+    <dl class="methodology-content">
+      <dt>Token measurement</dt>
+      <dd>Per-turn JSONL analysis of <code>cache_creation_input_tokens</code> deltas in parent session logs. Otto tool response sizes are model-independent — the same payloads are returned regardless of which Claude model processes them.</dd>
+
+      <dt>Wall-clock measurement</dt>
+      <dd><code>session_duration_seconds</code> from <code>close_session</code> MCP tool responses. Measures browser session duration only, excluding model reasoning time and orchestration overhead.</dd>
+
+      <dt>Playwright MCP baseline</dt>
+      <dd>~124,000 tokens per tool call based on Playwright MCP published baselines. Playwright snapshots the full accessibility tree on every interaction.</dd>
+
+      <dt>Model-independent vs model-specific</dt>
+      <dd>Token efficiency ratios (98× and 33×) are model-independent — confirmed identical across Opus 4.6 and Sonnet 4.6. Wall-clock times are model-specific: Sonnet completes the same tasks ~4.7× faster.</dd>
+
+      <dt>Benchmark version</dt>
+      <dd>v0.2 (February 2026). 3 runs per task, subagent orchestration, zero retries. v0.1 steady-state token data used for efficiency ratios.</dd>
+    </dl>
+  </div>
+
+  <!-- ══════ FOOTER ══════ -->
+  <footer class="footer">
+    <div>Otto v0.8.0 · <a href="https://github.com/stemado/otto">GitHub</a></div>
+    <div class="footer-links">
+      <a href="https://github.com/stemado/otto#benchmarks">README</a>
+      <a href="#top" class="back-to-top">Back to top ↑</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+  // ── Animated number counters ──
+  function animateCounter(el, target, decimals, duration) {
+    const start = performance.now();
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = eased * target;
+      el.textContent = decimals > 0 ? current.toFixed(decimals) : Math.round(current);
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  }
+
+  // ── IntersectionObserver for stats counters ──
+  const statsObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const counters = entry.target.querySelectorAll('[data-target]');
+        counters.forEach((el, i) => {
+          const target = parseFloat(el.dataset.target);
+          const decimals = parseInt(el.dataset.decimals, 10);
+          // stagger each counter slightly
+          setTimeout(() => animateCounter(el, target, decimals, 1500), i * 150);
+        });
+        statsObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  const statsGrid = document.getElementById('stats');
+  if (statsGrid) statsObserver.observe(statsGrid);
+
+  // ── IntersectionObserver for bar animations ──
+  const barObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const bars = entry.target.querySelectorAll('.bar-fill');
+        bars.forEach((bar, i) => {
+          const targetWidth = bar.dataset.width;
+          setTimeout(() => {
+            bar.style.width = targetWidth + '%';
+          }, i * 200);
+        });
+        barObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.2 });
+
+  document.querySelectorAll('.comparison-block').forEach(block => {
+    barObserver.observe(block);
+  });
+</script>
+</body>
+</html>
