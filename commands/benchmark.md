@@ -37,7 +37,7 @@ If not detectable from context, use AskUserQuestion:
 
 1. Glob `docs/plans/benchmarks/benchmark-results-v*.md` to find existing results files
 2. Parse the version numbers (e.g., `v0.1`, `v0.2`) from the filenames
-3. Increment the highest minor version by 0.1 (v0.2 → v0.3)
+3. Increment the highest minor version by 0.1 (v0.2 -> v0.3)
    Version numbers use a single decimal digit for the minor part (v0.1 through v0.9).
    At v0.9, increment to v1.0. Always format the version as `vMAJOR.MINOR` with exactly
    one decimal digit (e.g., `v0.3`, `v1.0`, never `v0.10`).
@@ -48,7 +48,7 @@ If no existing results files are found, default to `v0.1`.
 ## Step 4: Confirm before running
 
 Use AskUserQuestion with a single confirmation:
-- Question: "About to run [N tasks] × [runs_per_task runs] on [model]. Results → benchmark-results-[version].md. Proceed?"
+- Question: "About to run [N tasks] × [runs_per_task runs] on [model]. Results -> benchmark-results-[version].md. Proceed?"
 - Options: "Proceed", "Cancel"
 
 If "Cancel", stop immediately with: "Benchmark cancelled."
