@@ -30,6 +30,9 @@ class BrowserSession:
         download_dir: str = "./downloads",
         user_agent: str | None = None,
         window_size: tuple[int, int] | None = None,
+        *,
+        driver: Driver | None = None,
+        owns_browser: bool = True,
     ) -> None:
         self.session_id = uuid.uuid4().hex[:12]
         self.created_at = datetime.now(timezone.utc)
@@ -39,8 +42,9 @@ class BrowserSession:
         self._proxy = proxy
         self._user_agent = user_agent
         self._window_size = window_size
+        self.owns_browser = owns_browser
 
-        self.driver: Driver | None = None
+        self.driver: Driver | None = driver
         self.history = SessionHistoryTracker(self.session_id)
         self.network_monitor = NetworkMonitor(self.download_dir)
         self.screencast_monitor = ScreencastMonitor(self.download_dir)
@@ -117,6 +121,32 @@ class BrowserSession:
 
         if self.driver:
             try:
+                self.driver.close()
+            except Exception:
+                pass
+            self.driver = None
+
+        return SessionCloseResult(
+            closed=True,
+            session_duration_seconds=round(duration, 1),
+            total_actions_performed=total_actions,
+            total_scouts_performed=total_scouts,
+        )
+
+    def detach(self) -> SessionCloseResult:
+        """Detach from an attached browser without killing Chrome.
+
+        Drops the CDP connection and clears state, but leaves the Chrome
+        process running (it belongs to otto-engine).  Only valid when
+        ``owns_browser`` is False.
+        """
+        total_actions = len(self.history.actions)
+        total_scouts = len(self.history.scouts)
+        duration = (datetime.now(timezone.utc) - self.created_at).total_seconds()
+
+        if self.driver:
+            try:
+                # AttachedDriver.close() only drops CDP connections
                 self.driver.close()
             except Exception:
                 pass

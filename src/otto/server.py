@@ -37,6 +37,7 @@ from .otp import poll_for_otp
 from .secrets import EnvLoadError, load_env_vars
 from .sanitize import sanitize_response
 from .scout import build_element_summary, filter_elements, scout_page
+from .attached_driver import AttachedDriver
 from .session import BrowserSession
 
 # --- Numeric safety bounds ---
@@ -984,6 +985,85 @@ async def get_2fa_code(
 
 
 @mcp.tool()
+async def attach_session(
+    host: str,
+    port: int,
+    execution_id: str | None = None,
+    ctx: Context[ServerSession, AppContext] = None,
+) -> dict:
+    """Attach to an existing Chrome browser via CDP (Hot Takeover).
+
+    Connects to a Chrome instance owned by otto-engine (or any Chrome
+    started with --remote-debugging-port).  The browser stays alive when
+    this session is closed — only the CDP connection is dropped.
+
+    Use this after calling otto-engine's GET /api/executions/{id}/browser
+    to obtain the CDP host and port of a paused execution.
+
+    After attaching, use scout_page_tool and other tools normally. When
+    finished, use close_session (which will only detach, not kill Chrome)
+    or the /resume command to hand control back to the engine.
+
+    Args:
+        host: Chrome CDP host (e.g. '127.0.0.1').
+        port: Chrome CDP port (e.g. 51234).
+        execution_id: Optional otto-engine execution ID for context.
+    """
+    app_ctx = _get_ctx(ctx)
+
+    async with app_ctx._launch_lock:
+        if len(app_ctx.sessions) >= app_ctx.max_sessions:
+            active_ids = list(app_ctx.sessions.keys())
+            return {
+                "error": f"Maximum sessions ({app_ctx.max_sessions}) reached. "
+                f"Close session '{active_ids[0]}' first.",
+                "active_sessions": active_ids,
+            }
+
+        await ctx.info(f"Attaching to Chrome at {host}:{port}...")
+
+        driver = await asyncio.to_thread(AttachedDriver, host, port)
+
+        session = BrowserSession(
+            headless=False,
+            driver=driver,
+            owns_browser=False,
+        )
+
+        current_url = "unknown"
+        try:
+            current_url = driver.current_url or "about:blank"
+        except Exception:
+            pass
+
+        app_ctx.sessions[session.session_id] = session
+
+    browser_info = {}
+    try:
+        info = driver._browser.info
+        browser_info = {
+            "user_agent": info.get("User-Agent", ""),
+            "browser_version": info.get("Browser", ""),
+            "protocol_version": info.get("Protocol-Version", ""),
+        }
+    except Exception:
+        pass
+
+    await ctx.info(f"Attached session {session.session_id} — page: {current_url}")
+
+    result = SessionInfo(
+        session_id=session.session_id,
+        browser_info=browser_info,
+        current_url=current_url,
+        status="attached",
+    )
+    response = result.model_dump(exclude_none=True)
+    if execution_id:
+        response["execution_id"] = execution_id
+    return response
+
+
+@mcp.tool()
 async def close_session(
     session_id: str,
     ctx: Context[ServerSession, AppContext] = None,
@@ -991,6 +1071,8 @@ async def close_session(
     """Close the browser session and release all resources.
 
     Always call this when automation exploration is complete.
+    For attached sessions (Hot Takeover), this only drops the CDP
+    connection — the Chrome process stays alive for otto-engine.
 
     Args:
         session_id: Session ID to close.
@@ -999,7 +1081,12 @@ async def close_session(
     session = _get_session(app_ctx, session_id)
 
     await ctx.info(f"Closing session {session_id}...")
-    result: SessionCloseResult = await asyncio.to_thread(session.close)
+
+    if session.owns_browser:
+        result: SessionCloseResult = await asyncio.to_thread(session.close)
+    else:
+        result = await asyncio.to_thread(session.detach)
+
     del app_ctx.sessions[session_id]
 
     await ctx.info(
