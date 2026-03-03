@@ -116,7 +116,6 @@ These defenses raise the bar but are not a complete solution. When automating un
 
 #### What This System Cannot Do
 
-- It cannot bypass CAPTCHAs (though Botasaurus reduces how often they appear).
 - It cannot access cross-origin iframe content directly via DOM inspection. Use network monitoring or navigate to the iframe source URL separately if needed.
 - It does not persist sessions between Claude Code conversations. Each conversation starts fresh.
 
