@@ -25,7 +25,7 @@ Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. 
 |   | Otto | Dev-Browser | Chrome Extension MCP | Playwright MCP |
 | --- | --- | --- | --- | --- |
 | **Works on portals you don't control** | Yes -- enterprise portals, vendor dashboards, HR systems | Limited -- designed for your own app | Limited -- your active browser session | Limited -- designed for your own app |
-| **Page discovery** | Compact scout reports (~200 tokens) | You provide selectors | You provide selectors | You provide selectors |
+| **Page discovery** | Compact scout reports (~200 tokens vs ~124,000 for a Playwright screenshot) | You provide selectors | You provide selectors | You provide selectors |
 | **Credential safety** | Never appears in conversation | Plaintext in context | Plaintext in context | Plaintext in context |
 | **XHR interception** | Built-in network monitor with filtering | No | No | Limited |
 | **Export to script** | One command, runs unattended | No | No | No |
@@ -38,12 +38,12 @@ Otto is a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin. 
 
 ## Benchmarks
 
-Otto's compact scout reports and targeted extraction use dramatically fewer tokens than full-page snapshot approaches.
+Otto's compact scout reports return ~200 tokens per page vs ~124,000 tokens for a single Playwright MCP screenshot — 98% more efficient. For teams running automations regularly, that's the difference between viable and expensive.
 
 | Task | Otto | Playwright MCP | Reduction |
 | --- | --- | --- | --- |
-| **Fact lookup** (Wikipedia) | 1,264 tokens / 4 tool calls | ~124,000 tokens / 1 tool call | **98× fewer** |
-| **Form fill** (httpbin) | 3,799 tokens / 11 tool calls | ~124,000+ tokens | **33× fewer** |
+| **Fact lookup** (Wikipedia) | 1,264 tokens / 4 tool calls | ~124,000 tokens / 1 tool call | **98% fewer tokens** |
+| **Form fill** (httpbin) | 3,799 tokens / 11 tool calls | ~124,000+ tokens / multi-step | **97% fewer tokens** |
 
 Wall-clock: **2.2 s** (fact lookup) · **8.2 s** (form fill) on Sonnet 4.6 — **100% success rate**, zero retries across 6 runs.
 
@@ -51,7 +51,7 @@ Wall-clock: **2.2 s** (fact lookup) · **8.2 s** (form fill) on Sonnet 4.6 — *
 
 <p align="center">
   <a href="https://stemado.github.io/otto/benchmarks.html">
-    <img src="https://img.shields.io/badge/benchmarks-98×_fewer_tokens-f97316?style=for-the-badge" alt="Benchmarks: 98× fewer tokens">
+    <img src="https://img.shields.io/badge/benchmarks-98%25_fewer_tokens-f97316?style=for-the-badge" alt="Benchmarks: 98% fewer tokens">
   </a>
 </p>
 
